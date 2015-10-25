@@ -71,24 +71,30 @@ func mustExec(sqlStmt string) {
 	}
 }
 
+func timing(desc string, fn func()) {
+	fmt.Printf("%s ... [START]\n", desc)
+	c := time.Now()
+	fn()
+	fmt.Printf("%s ... elapse : %v [DONE]\n", desc, time.Since(c))
+}
+
 func insertTestData(rows int, workers int) error {
-	log.Debug("start insert test data...")
 	idChan := make(chan int)
 	wg := sync.WaitGroup{}
 	for i := 0; i < workers; i++ {
-		// worker func
+		// Worker func
 		go func(workerId int) {
 			wg.Add(1)
 			defer wg.Done()
 			for {
 				id, ok := <-idChan
-				// all data sent
+				// All data are sent
 				if !ok {
 					return
 				}
 				var bulks []string
 				for i := 0; i < *nCols; i++ {
-					// fill dummy data
+					// Fill dummy data, and generate SQL
 					buf := bytes.Repeat([]byte{'A'}, *bulkSize)
 					bulks = append(bulks, fmt.Sprintf("\"%s\"", string(buf)))
 				}
@@ -101,12 +107,13 @@ func insertTestData(rows int, workers int) error {
 		idChan <- i
 	}
 	close(idChan)
+	// Wait all worker to quit.
 	wg.Wait()
-	log.Debug("insert test data successfully")
 	return nil
 }
 
 func dropTable() {
+	log.Debug("drop bench table")
 	dropSql := fmt.Sprintf("DROP TABLE IF EXISTS %s_bench", *tblPrefix)
 	mustExec(dropSql)
 }
@@ -119,20 +126,19 @@ func createTable() {
 	fields := strings.Join(fieldNames, ",")
 	tblName := fmt.Sprintf("%s_bench", *tblPrefix)
 	if *force {
-		fmt.Println("drop bench table")
 		dropTable()
 	}
 	sql := fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s(id INT, %s, PRIMARY KEY(id))", tblName, fields)
 	mustExec(sql)
-	fmt.Println("create bench table successfully")
 }
 
 func main() {
 	flag.Parse()
 	log.SetLevelByString(*logLevel)
-	createTable()
-	c := time.Now()
-	fmt.Println("start insert test data")
-	insertTestData(*rows, *concurrent)
-	fmt.Println("insert test data OK, elapse:", time.Since(c))
+	timing("create table", func() {
+		createTable()
+	})
+	timing("insert test data", func() {
+		insertTestData(*rows, *concurrent)
+	})
 }
