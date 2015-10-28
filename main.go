@@ -33,7 +33,7 @@ var (
 	concurrent = flag.Int("c", 50, "concurrent workers, default: 50")
 	bulkSize   = flag.Int("bulk", 20, "test data size (one field, in byte), default: 20")
 	nCols      = flag.Int("cols", 2, "bench table column number, default: 2")
-	tblPrefix  = flag.String("prefix", "tidb", "bench table prefix, default: tidb")
+	tblPrefix  = flag.String("prefix", "", "bench table prefix, default: tidb_{random}")
 	addr       = flag.String("addr", ":4000", "tidb-server addr, default: :4000")
 	cases      = flag.String("t", "select", "test cases to run (select, update, delete), default: select,update")
 	dbName     = flag.String("db", "test", "db name, default: test")
@@ -41,6 +41,8 @@ var (
 	user       = flag.String("u", "root", "username, default: root")
 	password   = flag.String("p", "", "password, default: empty")
 	logLevel   = flag.String("L", "error", "log level, default: error")
+
+	tableName string
 )
 
 const (
@@ -57,6 +59,16 @@ var (
 	})
 )
 
+func init() {
+	flag.Parse()
+	if len(*tblPrefix) == 0 {
+		// if user doesn't provide specific table prefix, we generate one.
+		tableName = fmt.Sprintf("tidb_%v_bench", time.Now().UnixNano())
+	} else {
+		tableName = *tblPrefix + "_bench"
+	}
+}
+
 func exec(sqlStmt string) error {
 	db := connPool.Get().(*sql.DB)
 	defer connPool.Put(db)
@@ -67,6 +79,7 @@ func exec(sqlStmt string) error {
 
 func mustExec(sqlStmt string) {
 	if err := exec(sqlStmt); err != nil {
+		log.Error(sqlStmt)
 		log.Fatal(err)
 	}
 }
@@ -82,9 +95,9 @@ func insertTestData(rows int, workers int) error {
 	idChan := make(chan int)
 	wg := sync.WaitGroup{}
 	for i := 0; i < workers; i++ {
+		wg.Add(1)
 		// Worker func
 		go func(workerId int) {
-			wg.Add(1)
 			defer wg.Done()
 			for {
 				id, ok := <-idChan
@@ -98,7 +111,7 @@ func insertTestData(rows int, workers int) error {
 					buf := bytes.Repeat([]byte{'A'}, *bulkSize)
 					bulks = append(bulks, fmt.Sprintf("\"%s\"", string(buf)))
 				}
-				sql := fmt.Sprintf("INSERT INTO %s_bench VALUES(%d, %s);", *tblPrefix, id, strings.Join(bulks, ","))
+				sql := fmt.Sprintf("INSERT INTO %s VALUES(%d, %s);", tableName, id, strings.Join(bulks, ","))
 				mustExec(sql)
 			}
 		}(i)
@@ -114,7 +127,7 @@ func insertTestData(rows int, workers int) error {
 
 func dropTable() {
 	log.Debug("drop bench table")
-	dropSql := fmt.Sprintf("DROP TABLE IF EXISTS %s_bench", *tblPrefix)
+	dropSql := fmt.Sprintf("DROP TABLE IF EXISTS %s", tableName)
 	mustExec(dropSql)
 }
 
@@ -124,16 +137,14 @@ func createTable() {
 		fieldNames = append(fieldNames, fmt.Sprintf("f_%d TEXT", i))
 	}
 	fields := strings.Join(fieldNames, ",")
-	tblName := fmt.Sprintf("%s_bench", *tblPrefix)
 	if *force {
 		dropTable()
 	}
-	sql := fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s(id INT, %s, PRIMARY KEY(id))", tblName, fields)
+	sql := fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s(id INT, %s, PRIMARY KEY(id))", tableName, fields)
 	mustExec(sql)
 }
 
 func main() {
-	flag.Parse()
 	log.SetLevelByString(*logLevel)
 	timing("create table", func() {
 		createTable()
