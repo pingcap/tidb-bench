@@ -48,6 +48,7 @@ var (
 
 const (
 	ConnPoolSize = 100
+	ForceDrop    = true
 )
 
 var (
@@ -92,31 +93,32 @@ func timing(desc string, fn func()) {
 	fmt.Printf("%s ... elapse : %fs [DONE]\n", desc, time.Since(c).Seconds())
 }
 
+func doInsertTestData(workerId int, wg *sync.WaitGroup, idChan chan int) {
+	defer wg.Done()
+	for {
+		id, ok := <-idChan
+		// All data are sent
+		if !ok {
+			return
+		}
+		var bulks []string
+		for i := 0; i < *nCols; i++ {
+			// Fill dummy data, and generate SQL
+			buf := bytes.Repeat([]byte{'A'}, *bulkSize)
+			bulks = append(bulks, fmt.Sprintf("\"%s\"", string(buf)))
+		}
+		sql := fmt.Sprintf("INSERT INTO %s VALUES(%d, %s);", tableName, id, strings.Join(bulks, ","))
+		mustExec(sql)
+	}
+}
 func insertTestData(rows int, workers int) error {
-	truncTable()
+	createTable(ForceDrop)
 	idChan := make(chan int)
 	wg := sync.WaitGroup{}
 	for i := 0; i < workers; i++ {
 		wg.Add(1)
 		// Worker func
-		go func(workerId int) {
-			defer wg.Done()
-			for {
-				id, ok := <-idChan
-				// All data are sent
-				if !ok {
-					return
-				}
-				var bulks []string
-				for i := 0; i < *nCols; i++ {
-					// Fill dummy data, and generate SQL
-					buf := bytes.Repeat([]byte{'A'}, *bulkSize)
-					bulks = append(bulks, fmt.Sprintf("\"%s\"", string(buf)))
-				}
-				sql := fmt.Sprintf("INSERT INTO %s VALUES(%d, %s);", tableName, id, strings.Join(bulks, ","))
-				mustExec(sql)
-			}
-		}(i)
+		go doInsertTestData(i, &wg, idChan)
 	}
 	for i := 0; i < rows; i++ {
 		idChan <- i
@@ -127,43 +129,44 @@ func insertTestData(rows int, workers int) error {
 	return nil
 }
 
+func doInsertWithPrepareTestData(workerId int, wg *sync.WaitGroup, idChan chan int) {
+	defer wg.Done()
+	var placeHolder []string
+	for i := 0; i < *nCols; i++ {
+		placeHolder = append(placeHolder, "?")
+	}
+	placeHolderStr := string(strings.Join(placeHolder, ", "))
+	insStmt := fmt.Sprintf("PREPARE insStmt FROM 'INSERT INTO %s VALUES(?, %s)';",
+		tableName, placeHolderStr)
+	mustExec(insStmt)
+	for {
+		id, ok := <-idChan
+		// All data are sent
+		if !ok {
+			return
+		}
+		var setFields []string
+		var usingFields []string
+		for i := 0; i < *nCols; i++ {
+			// Fill dummy data, and generate SQL
+			buf := bytes.Repeat([]byte{'A'}, *bulkSize)
+			setFields = append(setFields, fmt.Sprintf("SET @txt_%d=\"%s\"", i, string(buf)))
+			usingFields = append(usingFields, fmt.Sprintf("@txt_%d", i))
+		}
+		exeStmt := fmt.Sprintf("SET @id=%d; %s; EXECUTE insStmt USING @id, %s;",
+			id, strings.Join(setFields, "; "), strings.Join(usingFields, ", "))
+		mustExec(exeStmt)
+	}
+}
 func insertWithPrepareTestData(rows int, workers int) error {
-	truncTable()
+	createTable(ForceDrop)
 	idChan := make(chan int)
 	wg := sync.WaitGroup{}
 
 	for i := 0; i < workers; i++ {
 		wg.Add(1)
 		// Worker func
-		go func(workerId int) {
-			defer wg.Done()
-			var placeHolder []string
-			for i := 0; i < *nCols; i++ {
-				placeHolder = append(placeHolder, "?")
-			}
-			placeHolderStr := string(strings.Join(placeHolder, ", "))
-			insStmt := fmt.Sprintf("PREPARE insStmt FROM 'INSERT INTO %s VALUES(?, %s)';",
-				tableName, placeHolderStr)
-			mustExec(insStmt)
-			for {
-				id, ok := <-idChan
-				// All data are sent
-				if !ok {
-					return
-				}
-				var setFields []string
-				var usingFields []string
-				for i := 0; i < *nCols; i++ {
-					// Fill dummy data, and generate SQL
-					buf := bytes.Repeat([]byte{'A'}, *bulkSize)
-					setFields = append(setFields, fmt.Sprintf("SET @txt_%d=\"%s\"", i, string(buf)))
-					usingFields = append(usingFields, fmt.Sprintf("@txt_%d", i))
-				}
-				exeStmt := fmt.Sprintf("SET @id=%d; %s; EXECUTE insStmt USING @id, %s;",
-					id, strings.Join(setFields, "; "), strings.Join(usingFields, ", "))
-				mustExec(exeStmt)
-			}
-		}(i)
+		go doInsertWithPrepareTestData(i, &wg, idChan)
 	}
 	for i := 0; i < rows; i++ {
 		idChan <- i
@@ -174,24 +177,25 @@ func insertWithPrepareTestData(rows int, workers int) error {
 	return nil
 }
 
+func doSelectPointTestData(workerId int, wg *sync.WaitGroup, idChan chan int) {
+	defer wg.Done()
+	for {
+		id, ok := <-idChan
+		// All data are sent
+		if !ok {
+			return
+		}
+		sql := fmt.Sprintf("SELECT * FROM %s WHERE id=%d;", tableName, id)
+		mustExec(sql)
+	}
+}
 func selectPointTestData(rows int, N int, workers int) error {
 	idChan := make(chan int)
 	wg := sync.WaitGroup{}
 	for i := 0; i < workers; i++ {
 		wg.Add(1)
 		// Worker func
-		go func(workerId int) {
-			defer wg.Done()
-			for {
-				id, ok := <-idChan
-				// All data are sent
-				if !ok {
-					return
-				}
-				sql := fmt.Sprintf("SELECT * FROM %s WHERE id=%d;", tableName, id)
-				mustExec(sql)
-			}
-		}(i)
+		go doSelectPointTestData(i, &wg, idChan)
 	}
 	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for i := 0; i < N; i++ {
@@ -203,37 +207,40 @@ func selectPointTestData(rows int, N int, workers int) error {
 	return nil
 }
 
-func selectRangeTestData(rows int, N int, workers int) error {
-	type Range struct {
-		x int
-		y int
+// for select/update/delete range
+type QueryRange struct {
+	lower int
+	upper int
+}
+
+func doSelectRangeTestData(workerId int, wg *sync.WaitGroup, rngChan chan QueryRange) {
+	defer wg.Done()
+	for {
+		id, ok := <-rngChan
+		// All data are sent
+		if !ok {
+			return
+		}
+		sql := fmt.Sprintf("SELECT * FROM %s WHERE %d<=id and id<%d;",
+			tableName, id.lower, id.upper)
+		mustExec(sql)
 	}
-	idChan := make(chan Range)
+}
+func selectRangeTestData(rows int, N int, workers int) error {
+	rngChan := make(chan QueryRange)
 	wg := sync.WaitGroup{}
 	for i := 0; i < workers; i++ {
 		wg.Add(1)
 		// Worker func
-		go func(workerId int) {
-			defer wg.Done()
-			for {
-				id, ok := <-idChan
-				// All data are sent
-				if !ok {
-					return
-				}
-				sql := fmt.Sprintf("SELECT * FROM %s WHERE %d<=id and id<%d;",
-					tableName, id.x, id.y)
-				mustExec(sql)
-			}
-		}(i)
+		go doSelectRangeTestData(i, &wg, rngChan)
 	}
 	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for i := 0; i < N; i++ {
 		low := rnd.Intn(rows)
 		upp := low + rnd.Intn(rows)
-		idChan <- Range{low, upp}
+		rngChan <- QueryRange{low, upp}
 	}
-	close(idChan)
+	close(rngChan)
 	// Wait all worker to quit.
 	wg.Wait()
 	return nil
@@ -245,28 +252,23 @@ func dropTable() {
 	mustExec(dropSql)
 }
 
-func createTable() {
+func createTable(force bool) {
 	var fieldNames []string
 	for i := 0; i < *nCols; i++ {
 		fieldNames = append(fieldNames, fmt.Sprintf("f_%d TEXT", i))
 	}
 	fields := strings.Join(fieldNames, ",")
-	if *force {
+	if force {
 		dropTable()
 	}
 	sql := fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s(id INT, %s, PRIMARY KEY(id))", tableName, fields)
 	mustExec(sql)
 }
 
-func truncTable() {
-	sql := fmt.Sprintf("TRUNCATE TABLE %s", tableName)
-	mustExec(sql)
-}
-
 func main() {
 	log.SetLevelByString(*logLevel)
 	timing("create table", func() {
-		createTable()
+		createTable(*force)
 	})
 	timing("insert test data", func() {
 		insertTestData(*rows, *concurrent)
