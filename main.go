@@ -18,6 +18,7 @@ import (
 	"database/sql"
 	"flag"
 	"fmt"
+	"math/rand"
 	"strings"
 	"sync"
 	"time"
@@ -88,10 +89,11 @@ func timing(desc string, fn func()) {
 	fmt.Printf("%s ... [START]\n", desc)
 	c := time.Now()
 	fn()
-	fmt.Printf("%s ... elapse : %v [DONE]\n", desc, time.Since(c))
+	fmt.Printf("%s ... elapse : %fs [DONE]\n", desc, time.Since(c).Seconds())
 }
 
 func insertTestData(rows int, workers int) error {
+	truncTable()
 	idChan := make(chan int)
 	wg := sync.WaitGroup{}
 	for i := 0; i < workers; i++ {
@@ -125,6 +127,118 @@ func insertTestData(rows int, workers int) error {
 	return nil
 }
 
+func insertWithPrepareTestData(rows int, workers int) error {
+	truncTable()
+	idChan := make(chan int)
+	wg := sync.WaitGroup{}
+
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+		// Worker func
+		go func(workerId int) {
+			defer wg.Done()
+			var placeHolder []string
+			for i := 0; i < *nCols; i++ {
+				placeHolder = append(placeHolder, "?")
+			}
+			placeHolderStr := string(strings.Join(placeHolder, ", "))
+			insStmt := fmt.Sprintf("PREPARE insStmt FROM 'INSERT INTO %s VALUES(?, %s)';",
+				tableName, placeHolderStr)
+			mustExec(insStmt)
+			for {
+				id, ok := <-idChan
+				// All data are sent
+				if !ok {
+					return
+				}
+				var setFields []string
+				var usingFields []string
+				for i := 0; i < *nCols; i++ {
+					// Fill dummy data, and generate SQL
+					buf := bytes.Repeat([]byte{'A'}, *bulkSize)
+					setFields = append(setFields, fmt.Sprintf("SET @txt_%d=\"%s\"", i, string(buf)))
+					usingFields = append(usingFields, fmt.Sprintf("@txt_%d", i))
+				}
+				exeStmt := fmt.Sprintf("SET @id=%d; %s; EXECUTE insStmt USING @id, %s;",
+					id, strings.Join(setFields, "; "), strings.Join(usingFields, ", "))
+				mustExec(exeStmt)
+			}
+		}(i)
+	}
+	for i := 0; i < rows; i++ {
+		idChan <- i
+	}
+	close(idChan)
+	// Wait all worker to quit.
+	wg.Wait()
+	return nil
+}
+
+func selectPointTestData(rows int, N int, workers int) error {
+	idChan := make(chan int)
+	wg := sync.WaitGroup{}
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+		// Worker func
+		go func(workerId int) {
+			defer wg.Done()
+			for {
+				id, ok := <-idChan
+				// All data are sent
+				if !ok {
+					return
+				}
+				sql := fmt.Sprintf("SELECT * FROM %s WHERE id=%d;", tableName, id)
+				mustExec(sql)
+			}
+		}(i)
+	}
+	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
+	for i := 0; i < N; i++ {
+		idChan <- rnd.Intn(rows)
+	}
+	close(idChan)
+	// Wait all worker to quit.
+	wg.Wait()
+	return nil
+}
+
+func selectRangeTestData(rows int, N int, workers int) error {
+	type Range struct {
+		x int
+		y int
+	}
+	idChan := make(chan Range)
+	wg := sync.WaitGroup{}
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+		// Worker func
+		go func(workerId int) {
+			defer wg.Done()
+			for {
+				id, ok := <-idChan
+				// All data are sent
+				if !ok {
+					return
+				}
+				sql := fmt.Sprintf("SELECT * FROM %s WHERE %d<=id and id<%d;",
+					tableName, id.x, id.y)
+				mustExec(sql)
+			}
+		}(i)
+	}
+	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
+	for i := 0; i < N; i++ {
+		low := rnd.Intn(rows)
+		upp := low + rnd.Intn(rows)
+		idChan <- Range{low, upp}
+	}
+	close(idChan)
+	// Wait all worker to quit.
+	wg.Wait()
+	return nil
+}
+
 func dropTable() {
 	log.Debug("drop bench table")
 	dropSql := fmt.Sprintf("DROP TABLE IF EXISTS %s", tableName)
@@ -144,6 +258,11 @@ func createTable() {
 	mustExec(sql)
 }
 
+func truncTable() {
+	sql := fmt.Sprintf("TRUNCATE TABLE %s", tableName)
+	mustExec(sql)
+}
+
 func main() {
 	log.SetLevelByString(*logLevel)
 	timing("create table", func() {
@@ -152,4 +271,17 @@ func main() {
 	timing("insert test data", func() {
 		insertTestData(*rows, *concurrent)
 	})
+	timing("insert with prepare test data", func() {
+		insertWithPrepareTestData(*rows, *concurrent)
+	})
+
+	{
+		insertTestData(*rows, *concurrent)
+		timing("select point data", func() {
+			selectPointTestData(*rows, *N, *concurrent)
+		})
+		timing("select range data", func() {
+			selectRangeTestData(*rows, *N, *concurrent)
+		})
+	}
 }
