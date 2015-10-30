@@ -86,6 +86,31 @@ func mustExec(sqlStmt string) {
 	}
 }
 
+func query(sqlStmt string) (*sql.Rows, error) {
+	db := connPool.Get().(*sql.DB)
+	defer connPool.Put(db)
+	log.Debug("query sql:", sqlStmt)
+	rows, err := db.Query(sqlStmt)
+	return rows, err
+}
+func checkQuery(sqlStmt string, expectRows int) {
+	rows, err := query(sqlStmt)
+	if err != nil {
+		log.Error(sqlStmt)
+	}
+	actGot := 0
+	for rows.Next() {
+		actGot++
+		if actGot > expectRows {
+			log.Fatal(fmt.Sprintf("sql return count does not match. actual got %d great than expect %d\n", actGot, expectRows))
+			break
+		}
+	}
+	if actGot < expectRows {
+		log.Fatal(fmt.Sprintf("sql return count does not match. actual got %d less than expect %d\n", actGot, expectRows))
+	}
+}
+
 func timing(desc string, fn func()) {
 	fmt.Printf("%s ... [START]\n", desc)
 	c := time.Now()
@@ -186,7 +211,7 @@ func doSelectPointTestData(workerId int, wg *sync.WaitGroup, idChan chan int) {
 			return
 		}
 		sql := fmt.Sprintf("SELECT * FROM %s WHERE id=%d;", tableName, id)
-		mustExec(sql)
+		checkQuery(sql, 1)
 	}
 }
 func selectPointTestData(rows int, N int, workers int) error {
@@ -216,16 +241,37 @@ type QueryRange struct {
 func doSelectRangeTestData(workerId int, wg *sync.WaitGroup, rngChan chan QueryRange) {
 	defer wg.Done()
 	for {
-		id, ok := <-rngChan
+		rng, ok := <-rngChan
 		// All data are sent
 		if !ok {
 			return
 		}
 		sql := fmt.Sprintf("SELECT * FROM %s WHERE %d<=id and id<%d;",
-			tableName, id.lower, id.upper)
-		mustExec(sql)
+			tableName, rng.lower, rng.upper)
+
+		// calc expect rows for testing
+		var expectRows int
+		var actUpp, actLow int
+		if rng.upper > *rows {
+			actUpp = *rows
+		} else {
+			actUpp = rng.upper
+		}
+		if rng.lower < 0 {
+			actLow = 0
+		} else {
+			actLow = rng.lower
+		}
+		if actUpp < actLow {
+			expectRows = 0
+		} else {
+			expectRows = actUpp - actLow
+		}
+
+		checkQuery(sql, expectRows)
 	}
 }
+
 func selectRangeTestData(rows int, N int, workers int) error {
 	rngChan := make(chan QueryRange)
 	wg := sync.WaitGroup{}
@@ -267,15 +313,15 @@ func createTable(force bool) {
 
 func main() {
 	log.SetLevelByString(*logLevel)
-	timing("create table", func() {
-		createTable(*force)
-	})
-	timing("insert test data", func() {
-		insertTestData(*rows, *concurrent)
-	})
-	timing("insert with prepare test data", func() {
-		insertWithPrepareTestData(*rows, *concurrent)
-	})
+	//timing("create table", func() {
+	//createTable(*force)
+	//})
+	//timing("insert test data", func() {
+	//insertTestData(*rows, *concurrent)
+	//})
+	//timing("insert with prepare test data", func() {
+	//insertWithPrepareTestData(*rows, *concurrent)
+	//})
 
 	{
 		insertTestData(*rows, *concurrent)
