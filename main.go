@@ -47,12 +47,12 @@ var (
 )
 
 const (
-	ConnPoolSize = 100
-	ForceDrop    = true
+	connPoolSize = 100
+	forceDrop    = true
 )
 
 var (
-	connPool = pool.NewCache("pool", ConnPoolSize, func() interface{} {
+	connPool = pool.NewCache("pool", connPoolSize, func() interface{} {
 		db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s", *user, *password, *addr, *dbName))
 		if err != nil {
 			log.Fatal(err)
@@ -90,8 +90,7 @@ func query(sqlStmt string) (*sql.Rows, error) {
 	db := connPool.Get().(*sql.DB)
 	defer connPool.Put(db)
 	log.Debug("query sql:", sqlStmt)
-	rows, err := db.Query(sqlStmt)
-	return rows, err
+	return db.Query(sqlStmt)
 }
 func checkQuery(sqlStmt string, expectRows int) {
 	rows, err := query(sqlStmt)
@@ -102,12 +101,12 @@ func checkQuery(sqlStmt string, expectRows int) {
 	for rows.Next() {
 		actGot++
 		if actGot > expectRows {
-			log.Fatal(fmt.Sprintf("sql return count does not match. actual got %d great than expect %d\n", actGot, expectRows))
+			log.Fatalf("sql return count does not match. actual got %d great than expect %d\n", actGot, expectRows)
 			break
 		}
 	}
 	if actGot < expectRows {
-		log.Fatal(fmt.Sprintf("sql return count does not match. actual got %d less than expect %d\n", actGot, expectRows))
+		log.Fatalf("sql return count does not match. actual got %d less than expect %d\n", actGot, expectRows)
 	}
 }
 
@@ -137,7 +136,7 @@ func doInsertTestData(workerId int, wg *sync.WaitGroup, idChan chan int) {
 	}
 }
 func insertTestData(rows int, workers int) error {
-	createTable(ForceDrop)
+	createTable(forceDrop)
 	idChan := make(chan int)
 	wg := sync.WaitGroup{}
 	for i := 0; i < workers; i++ {
@@ -184,7 +183,7 @@ func doInsertWithPrepareTestData(workerId int, wg *sync.WaitGroup, idChan chan i
 	}
 }
 func insertWithPrepareTestData(rows int, workers int) error {
-	createTable(ForceDrop)
+	createTable(forceDrop)
 	idChan := make(chan int)
 	wg := sync.WaitGroup{}
 
@@ -313,23 +312,21 @@ func createTable(force bool) {
 
 func main() {
 	log.SetLevelByString(*logLevel)
-	//timing("create table", func() {
-	//createTable(*force)
-	//})
-	//timing("insert test data", func() {
-	//insertTestData(*rows, *concurrent)
-	//})
-	//timing("insert with prepare test data", func() {
-	//insertWithPrepareTestData(*rows, *concurrent)
-	//})
-
-	{
+	timing("create table", func() {
+		createTable(*force)
+	})
+	timing("insert test data", func() {
 		insertTestData(*rows, *concurrent)
-		timing("select point data", func() {
-			selectPointTestData(*rows, *N, *concurrent)
-		})
-		timing("select range data", func() {
-			selectRangeTestData(*rows, *N, *concurrent)
-		})
-	}
+	})
+	timing("insert with prepare test data", func() {
+		insertWithPrepareTestData(*rows, *concurrent)
+	})
+
+	//insertTestData(*rows, *concurrent)
+	//timing("select point data", func() {
+	//selectPointTestData(*rows, *N, *concurrent)
+	//})
+	//timing("select range data", func() {
+	//selectRangeTestData(*rows, *N, *concurrent)
+	//})
 }
