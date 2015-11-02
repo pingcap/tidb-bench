@@ -136,7 +136,6 @@ func doInsertTestData(workerId int, wg *sync.WaitGroup, idChan chan int) {
 	}
 }
 func insertTestData(rows int, workers int) error {
-	createTable(forceDrop)
 	idChan := make(chan int)
 	wg := sync.WaitGroup{}
 	for i := 0; i < workers; i++ {
@@ -160,8 +159,8 @@ func doInsertWithPrepareTestData(workerId int, wg *sync.WaitGroup, idChan chan i
 		placeHolder = append(placeHolder, "?")
 	}
 	placeHolderStr := string(strings.Join(placeHolder, ", "))
-	insStmt := fmt.Sprintf("PREPARE insStmt FROM 'INSERT INTO %s VALUES(?, %s)';",
-		tableName, placeHolderStr)
+	insStmt := fmt.Sprintf("PREPARE insStmt_%d FROM 'INSERT INTO %s VALUES(?, %s)';",
+		workerId, tableName, placeHolderStr)
 	mustExec(insStmt)
 	for {
 		id, ok := <-idChan
@@ -177,13 +176,12 @@ func doInsertWithPrepareTestData(workerId int, wg *sync.WaitGroup, idChan chan i
 			setFields = append(setFields, fmt.Sprintf("SET @txt_%d=\"%s\"", i, string(buf)))
 			usingFields = append(usingFields, fmt.Sprintf("@txt_%d", i))
 		}
-		exeStmt := fmt.Sprintf("SET @id=%d; %s; EXECUTE insStmt USING @id, %s;",
-			id, strings.Join(setFields, "; "), strings.Join(usingFields, ", "))
+		exeStmt := fmt.Sprintf("SET @id=%d; %s; EXECUTE insStmt_%d USING @id, %s;",
+			id, strings.Join(setFields, "; "), workerId, strings.Join(usingFields, ", "))
 		mustExec(exeStmt)
 	}
 }
 func insertWithPrepareTestData(rows int, workers int) error {
-	createTable(forceDrop)
 	idChan := make(chan int)
 	wg := sync.WaitGroup{}
 
@@ -315,18 +313,22 @@ func main() {
 	timing("create table", func() {
 		createTable(*force)
 	})
+	createTable(forceDrop)
 	timing("insert test data", func() {
 		insertTestData(*rows, *concurrent)
 	})
+	createTable(forceDrop)
 	timing("insert with prepare test data", func() {
 		insertWithPrepareTestData(*rows, *concurrent)
 	})
 
-	//insertTestData(*rows, *concurrent)
-	//timing("select point data", func() {
-	//selectPointTestData(*rows, *N, *concurrent)
-	//})
-	//timing("select range data", func() {
-	//selectRangeTestData(*rows, *N, *concurrent)
-	//})
+	createTable(forceDrop)
+	insertTestData(*rows, *concurrent)
+	timing("select point data", func() {
+		selectPointTestData(*rows, *N, *concurrent)
+	})
+	timing("select range data", func() {
+		selectRangeTestData(*rows, *N, *concurrent)
+	})
+	dropTable()
 }
