@@ -86,6 +86,14 @@ func mustExec(sqlStmt string) {
 	}
 }
 
+func dbMustExec(db *sql.DB, sqlStmt string) {
+	log.Debug("exec sql:", sqlStmt)
+	if _, err := db.Exec(sqlStmt); err != nil {
+		log.Error(sqlStmt)
+		log.Fatal(err)
+	}
+}
+
 func query(sqlStmt string) (*sql.Rows, error) {
 	db := connPool.Get().(*sql.DB)
 	defer connPool.Put(db)
@@ -154,6 +162,8 @@ func insertTestData(rows int, workers int) error {
 
 func doInsertWithPrepareTestData(workerId int, wg *sync.WaitGroup, idChan chan int) {
 	defer wg.Done()
+	db := connPool.Get().(*sql.DB)
+	defer connPool.Put(db)
 	var placeHolder []string
 	for i := 0; i < *nCols; i++ {
 		placeHolder = append(placeHolder, "?")
@@ -161,7 +171,7 @@ func doInsertWithPrepareTestData(workerId int, wg *sync.WaitGroup, idChan chan i
 	placeHolderStr := string(strings.Join(placeHolder, ", "))
 	insStmt := fmt.Sprintf("PREPARE insStmt_%d FROM 'INSERT INTO %s VALUES(?, %s)';",
 		workerId, tableName, placeHolderStr)
-	mustExec(insStmt)
+	dbMustExec(db, insStmt)
 	for {
 		id, ok := <-idChan
 		// All data are sent
@@ -173,12 +183,12 @@ func doInsertWithPrepareTestData(workerId int, wg *sync.WaitGroup, idChan chan i
 		for i := 0; i < *nCols; i++ {
 			// Fill dummy data, and generate SQL
 			buf := bytes.Repeat([]byte{'A'}, *bulkSize)
-			setFields = append(setFields, fmt.Sprintf("SET @txt_%d=\"%s\"", i, string(buf)))
-			usingFields = append(usingFields, fmt.Sprintf("@txt_%d", i))
+			setFields = append(setFields, fmt.Sprintf("SET @txt_%d_%d=\"%s\"", workerId, i, string(buf)))
+			usingFields = append(usingFields, fmt.Sprintf("@txt_%d_%d", workerId, i))
 		}
-		exeStmt := fmt.Sprintf("SET @id=%d; %s; EXECUTE insStmt_%d USING @id, %s;",
-			id, strings.Join(setFields, "; "), workerId, strings.Join(usingFields, ", "))
-		mustExec(exeStmt)
+		exeStmt := fmt.Sprintf("SET @id_%d=%d; %s; EXECUTE insStmt_%d USING @id_%d, %s;",
+			workerId, id, strings.Join(setFields, "; "), workerId, workerId, strings.Join(usingFields, ", "))
+		dbMustExec(db, exeStmt)
 	}
 }
 func insertWithPrepareTestData(rows int, workers int) error {
