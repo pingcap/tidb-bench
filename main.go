@@ -225,7 +225,7 @@ func doBatchInsert(fromId, toId int, wg *sync.WaitGroup) {
 		vals = append(vals, val)
 	}
 	sql := fmt.Sprintf(sqlFmt, tableName, strings.Join(vals, ","))
-	log.Info(sql)
+	log.Debug(sql)
 	mustExec(sql)
 }
 func insertBatchTestData(rows int, workers int) error {
@@ -283,7 +283,7 @@ func main() {
 	log.SetLevelByString(*logLevel)
 	createTable(forceDrop)
 	{
-		timing("insert test data", func() {
+		timing("insert batch data", func() {
 			insertBatchTestData(*rows, *concurrent)
 		})
 		if !*insertOnly {
@@ -295,5 +295,6 @@ func main() {
 			})
 		}
 	}
+	log.Infof("%f, %d %d", tm.Mean()*1e-9, tm.Count(), tm.Sum())
 	dropTable()
 }

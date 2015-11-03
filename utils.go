@@ -7,6 +7,12 @@ import (
 	"time"
 
 	"github.com/ngaut/log"
+	"github.com/rcrowley/go-metrics"
+)
+
+var (
+	tm     = metrics.NewTimer()
+	lastTm = tm.Snapshot()
 )
 
 func exec(sqlStmt string) error {
@@ -18,9 +24,15 @@ func exec(sqlStmt string) error {
 }
 
 func mustExec(sqlStmt string) {
-	if err := exec(sqlStmt); err != nil {
-		log.Error(sqlStmt)
-		log.Fatal(err)
+	tm.Time(func() {
+		if err := exec(sqlStmt); err != nil {
+			log.Error(sqlStmt)
+			log.Fatal(err)
+		}
+	})
+	if tm.Sum() > lastTm.Sum()+int64(*concurrent)*1e9 {
+		log.Infof("%f %d %f", tm.Mean()*1e-9/float64(*concurrent), tm.Count(), float64(tm.Sum())*1e-9/float64(*concurrent))
+		lastTm = tm.Snapshot()
 	}
 }
 
