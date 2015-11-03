@@ -42,6 +42,7 @@ var (
 	user       = flag.String("u", "root", "username, default: root")
 	password   = flag.String("p", "", "password, default: empty")
 	logLevel   = flag.String("L", "error", "log level, default: error")
+	insertOnly = flag.Bool("insert-only", true, "insert data only")
 
 	tableName string
 )
@@ -69,60 +70,6 @@ func init() {
 	} else {
 		tableName = *tblPrefix + "_bench"
 	}
-}
-
-func exec(sqlStmt string) error {
-	db := connPool.Get().(*sql.DB)
-	defer connPool.Put(db)
-	log.Debug("exec sql:", sqlStmt)
-	_, err := db.Exec(sqlStmt)
-	return err
-}
-
-func mustExec(sqlStmt string) {
-	if err := exec(sqlStmt); err != nil {
-		log.Error(sqlStmt)
-		log.Fatal(err)
-	}
-}
-
-func dbMustExec(db *sql.DB, sqlStmt string) {
-	log.Debug("exec sql:", sqlStmt)
-	if _, err := db.Exec(sqlStmt); err != nil {
-		log.Error(sqlStmt)
-		log.Fatal(err)
-	}
-}
-
-func query(sqlStmt string) (*sql.Rows, error) {
-	db := connPool.Get().(*sql.DB)
-	defer connPool.Put(db)
-	log.Debug("query sql:", sqlStmt)
-	return db.Query(sqlStmt)
-}
-func checkQuery(sqlStmt string, expectRows int) {
-	rows, err := query(sqlStmt)
-	if err != nil {
-		log.Error(sqlStmt)
-	}
-	actGot := 0
-	for rows.Next() {
-		actGot++
-		if actGot > expectRows {
-			log.Fatalf("sql return count does not match. actual got %d great than expect %d\n", actGot, expectRows)
-			break
-		}
-	}
-	if actGot < expectRows {
-		log.Fatalf("sql return count does not match. actual got %d less than expect %d\n", actGot, expectRows)
-	}
-}
-
-func timing(desc string, fn func()) {
-	fmt.Printf("%s ... [START]\n", desc)
-	c := time.Now()
-	fn()
-	fmt.Printf("%s ... elapse : %fs [DONE]\n", desc, time.Since(c).Seconds())
 }
 
 func doInsertTestData(workerId int, wg *sync.WaitGroup, idChan chan int) {
@@ -221,31 +168,14 @@ func doSelectPointTestData(workerId int, wg *sync.WaitGroup, idChan chan int) {
 		checkQuery(sql, 1)
 	}
 }
-func selectPointTestData(rows int, N int, workers int) error {
-	idChan := make(chan int)
-	wg := sync.WaitGroup{}
-	for i := 0; i < workers; i++ {
-		wg.Add(1)
-		// Worker func
-		go doSelectPointTestData(i, &wg, idChan)
-	}
-	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
-	for i := 0; i < N; i++ {
-		idChan <- rnd.Intn(rows)
-	}
-	close(idChan)
-	// Wait all worker to quit.
-	wg.Wait()
-	return nil
-}
 
 // for select/update/delete range
-type QueryRange struct {
+type queryRange struct {
 	lower int
 	upper int
 }
 
-func doSelectRangeTestData(workerId int, wg *sync.WaitGroup, rngChan chan QueryRange) {
+func doSelectRangeTestData(workerId int, wg *sync.WaitGroup, rngChan chan queryRange) {
 	defer wg.Done()
 	for {
 		rng, ok := <-rngChan
@@ -279,8 +209,58 @@ func doSelectRangeTestData(workerId int, wg *sync.WaitGroup, rngChan chan QueryR
 	}
 }
 
+func doBatchInsert(fromId, toId int, wg *sync.WaitGroup) {
+	defer wg.Done()
+	sqlFmt := "INSERT INTO %s VALUES %s"
+
+	var vals []string
+	for i := fromId; i < toId; i++ {
+		var strFields []string
+		for j := 0; j < *nCols; j++ {
+			buf := bytes.Repeat([]byte{'A'}, *bulkSize)
+			// ["aaaa", "aaaa"]
+			strFields = append(strFields, "\""+string(buf)+"\"")
+		}
+		val := fmt.Sprintf("(%d, %s)", i, strings.Join(strFields, ","))
+		vals = append(vals, val)
+	}
+	sql := fmt.Sprintf(sqlFmt, tableName, strings.Join(vals, ","))
+	log.Info(sql)
+	mustExec(sql)
+}
+func insertBatchTestData(rows int, workers int) error {
+	wg := sync.WaitGroup{}
+	batchSize := 100
+	offset := 0
+	for offset < rows {
+		wg.Add(1)
+		go doBatchInsert(offset, offset+batchSize, &wg)
+		offset += batchSize
+	}
+	wg.Wait()
+	return nil
+}
+
+func selectPointTestData(rows int, N int, workers int) error {
+	idChan := make(chan int)
+	wg := sync.WaitGroup{}
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+		// Worker func
+		go doSelectPointTestData(i, &wg, idChan)
+	}
+	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
+	for i := 0; i < N; i++ {
+		idChan <- rnd.Intn(rows)
+	}
+	close(idChan)
+	// Wait all worker to quit.
+	wg.Wait()
+	return nil
+}
+
 func selectRangeTestData(rows int, N int, workers int) error {
-	rngChan := make(chan QueryRange)
+	rngChan := make(chan queryRange)
 	wg := sync.WaitGroup{}
 	for i := 0; i < workers; i++ {
 		wg.Add(1)
@@ -291,7 +271,7 @@ func selectRangeTestData(rows int, N int, workers int) error {
 	for i := 0; i < N; i++ {
 		low := rnd.Intn(rows)
 		upp := low + rnd.Intn(rows)
-		rngChan <- QueryRange{low, upp}
+		rngChan <- queryRange{low, upp}
 	}
 	close(rngChan)
 	// Wait all worker to quit.
@@ -299,46 +279,21 @@ func selectRangeTestData(rows int, N int, workers int) error {
 	return nil
 }
 
-func dropTable() {
-	log.Debug("drop bench table")
-	dropSql := fmt.Sprintf("DROP TABLE IF EXISTS %s", tableName)
-	mustExec(dropSql)
-}
-
-func createTable(force bool) {
-	var fieldNames []string
-	for i := 0; i < *nCols; i++ {
-		fieldNames = append(fieldNames, fmt.Sprintf("f_%d TEXT", i))
-	}
-	fields := strings.Join(fieldNames, ",")
-	if force {
-		dropTable()
-	}
-	sql := fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s(id INT, %s, PRIMARY KEY(id))", tableName, fields)
-	mustExec(sql)
-}
-
 func main() {
 	log.SetLevelByString(*logLevel)
-	timing("create table", func() {
-		createTable(*force)
-	})
 	createTable(forceDrop)
-	timing("insert test data", func() {
-		insertTestData(*rows, *concurrent)
-	})
-	createTable(forceDrop)
-	timing("insert with prepare test data", func() {
-		insertWithPrepareTestData(*rows, *concurrent)
-	})
-
-	createTable(forceDrop)
-	insertTestData(*rows, *concurrent)
-	timing("select point data", func() {
-		selectPointTestData(*rows, *N, *concurrent)
-	})
-	timing("select range data", func() {
-		selectRangeTestData(*rows, *N, *concurrent)
-	})
+	{
+		timing("insert test data", func() {
+			insertBatchTestData(*rows, *concurrent)
+		})
+		if !*insertOnly {
+			timing("select point data", func() {
+				selectPointTestData(*rows, *N, *concurrent)
+			})
+			timing("select range data", func() {
+				selectRangeTestData(*rows, *N, *concurrent)
+			})
+		}
+	}
 	dropTable()
 }
