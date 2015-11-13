@@ -9,6 +9,29 @@ import (
 	"github.com/ngaut/log"
 )
 
+func execTxn(sqlStmts []string) error {
+	db := connPool.Get().(*sql.DB)
+	defer connPool.Put(db)
+
+	txn, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	for _, sqlStmt := range sqlStmts {
+		_, err := txn.Exec(sqlStmt)
+		if err != nil {
+			txn.Rollback()
+			return err
+		}
+	}
+	err = txn.Commit()
+	if err != nil {
+		txn.Rollback()
+		return err
+	}
+	return nil
+}
+
 func exec(sqlStmt string) error {
 	db := connPool.Get().(*sql.DB)
 	defer connPool.Put(db)

@@ -72,24 +72,24 @@ func init() {
 	}
 }
 
-func doBatchInsert(fromId, toId int, wg *sync.WaitGroup) {
-	defer wg.Done()
+func doBatchInsert(fromId, toId int) {
 	sqlFmt := "INSERT INTO %s VALUES %s"
-
-	var vals []string
+	var stmts []string
 	for i := fromId; i < toId; i++ {
 		var strFields []string
 		for j := 0; j < *nCols; j++ {
 			buf := bytes.Repeat([]byte{'A'}, *bulkSize)
-			// ["aaaa", "aaaa"]
 			strFields = append(strFields, "\""+string(buf)+"\"")
 		}
 		val := fmt.Sprintf("(%d, %s)", i, strings.Join(strFields, ","))
-		vals = append(vals, val)
+		sql := fmt.Sprintf(sqlFmt, tableName, val)
+		stmts = append(stmts, sql)
 	}
-	sql := fmt.Sprintf(sqlFmt, tableName, strings.Join(vals, ","))
-	log.Info(sql)
-	mustExec(sql)
+	err := execTxn(stmts)
+	if err != nil {
+		log.Error(err)
+	}
+	//mustExec(sql)
 }
 
 func doSelectPointTestData(workerId int, wg *sync.WaitGroup, idChan chan int) {
@@ -146,18 +146,35 @@ func doSelectRangeTestData(workerId int, wg *sync.WaitGroup, rngChan chan queryR
 }
 
 func insertTestData(rows int, workers int) error {
-	wg := sync.WaitGroup{}
-	batchSize := 100
+	batchSize := 10000
 	offset := 0
+
+	jobChan := make(chan int)
+	wg := sync.WaitGroup{}
+	wg.Add(workers)
+	for i := 0; i < workers; i++ {
+		go func() {
+			defer wg.Done()
+			for {
+				offset, ok := <-jobChan
+				if !ok {
+					break
+				}
+				doBatchInsert(offset, offset+batchSize)
+			}
+		}()
+	}
+
 	for offset < rows {
-		wg.Add(1)
-		go doBatchInsert(offset, offset+batchSize, &wg)
+		jobChan <- offset
 		offset += batchSize
 	}
+	close(jobChan)
 	wg.Wait()
 	return nil
 }
 
+// test point query
 func selectPointTestData(rows int, N int, workers int) error {
 	idChan := make(chan int)
 	wg := sync.WaitGroup{}
@@ -176,6 +193,7 @@ func selectPointTestData(rows int, N int, workers int) error {
 	return nil
 }
 
+// test range query
 func selectRangeTestData(rows int, N int, workers int) error {
 	rngChan := make(chan queryRange)
 	wg := sync.WaitGroup{}
