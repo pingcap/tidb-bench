@@ -73,6 +73,10 @@ func init() {
 }
 
 func doBatchInsert(fromId, toId int) {
+	t := time.Now()
+	defer func() {
+		fmt.Println("insert from:", fromId, "to:", toId, "elapse:", time.Since(t))
+	}()
 	sqlFmt := "INSERT INTO %s VALUES %s"
 	var stmts []string
 	for i := fromId; i < toId; i++ {
@@ -146,7 +150,7 @@ func doSelectRangeTestData(workerId int, wg *sync.WaitGroup, rngChan chan queryR
 }
 
 func insertTestData(rows int, workers int) error {
-	batchSize := 10000
+	batchSize := 5000
 	offset := 0
 
 	jobChan := make(chan int)
@@ -225,9 +229,9 @@ func main() {
 			timing("select point data", func() {
 				selectPointTestData(*rows, *N, *concurrent)
 			})
-			timing("select range data", func() {
-				selectRangeTestData(*rows, *N, *concurrent)
-			})
+			//timing("select range data", func() {
+			//selectRangeTestData(*rows, *N, *concurrent)
+			//})
 		}
 	}
 }
