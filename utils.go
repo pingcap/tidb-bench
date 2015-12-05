@@ -98,5 +98,7 @@ func timing(desc string, fn func()) {
 	fmt.Printf("%s ... [START]\n", desc)
 	c := time.Now()
 	fn()
-	fmt.Printf("%s ... elapse : %fs [DONE]\n", desc, time.Since(c).Seconds())
+	elapse := time.Since(c).Seconds()
+	tps := float64(*rows) / elapse
+	fmt.Printf("\n%s finished ... elapse : %fs tps:%f\n", desc, elapse, tps)
 }

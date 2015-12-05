@@ -32,7 +32,9 @@ var (
 	rows       = flag.Int("rows", 10000, "row number of bench table, default: 10000")
 	N          = flag.Int("N", 10000, "select/update times, default: 10000")
 	concurrent = flag.Int("c", 50, "concurrent workers, default: 50")
+	batchSize  = flag.Int("batch", 5000, "batch size, default: 5000")
 	bulkSize   = flag.Int("bulk", 20, "test data size (one field, in byte), default: 20")
+	poolSize   = flag.Int("pool", 100, "connection poll size, default: 200")
 	nCols      = flag.Int("cols", 2, "bench table column number, default: 2")
 	tblPrefix  = flag.String("prefix", "", "bench table prefix, default: tidb_{random}")
 	addr       = flag.String("addr", ":4000", "tidb-server addr, default: :4000")
@@ -48,12 +50,11 @@ var (
 )
 
 const (
-	ConnPoolSize = 100
-	ForceDrop    = true
+	forceDrop = true
 )
 
 var (
-	connPool = pool.NewCache("pool", ConnPoolSize, func() interface{} {
+	connPool = pool.NewCache("pool", *poolSize, func() interface{} {
 		db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s", *user, *password, *addr, *dbName))
 		if err != nil {
 			log.Fatal(err)
@@ -73,10 +74,6 @@ func init() {
 }
 
 func doBatchInsert(fromId, toId int) {
-	t := time.Now()
-	defer func() {
-		fmt.Println("insert from:", fromId, "to:", toId, "elapse:", time.Since(t))
-	}()
 	sqlFmt := "INSERT INTO %s VALUES %s"
 	var stmts []string
 	for i := fromId; i < toId; i++ {
@@ -93,7 +90,6 @@ func doBatchInsert(fromId, toId int) {
 	if err != nil {
 		log.Error(err)
 	}
-	//mustExec(sql)
 }
 
 func doSelectPointTestData(workerId int, wg *sync.WaitGroup, idChan chan int) {
@@ -150,9 +146,8 @@ func doSelectRangeTestData(workerId int, wg *sync.WaitGroup, rngChan chan queryR
 }
 
 func insertTestData(rows int, workers int) error {
-	batchSize := 5000
 	offset := 0
-
+	totalDone := 0
 	jobChan := make(chan int)
 	wg := sync.WaitGroup{}
 	wg.Add(workers)
@@ -164,14 +159,16 @@ func insertTestData(rows int, workers int) error {
 				if !ok {
 					break
 				}
-				doBatchInsert(offset, offset+batchSize)
+				doBatchInsert(offset, offset+*batchSize)
+				totalDone += *batchSize
+				fmt.Printf("\r%d %%", (totalDone/rows*1.0)*100)
 			}
 		}()
 	}
 
 	for offset < rows {
 		jobChan <- offset
-		offset += batchSize
+		offset += *batchSize
 	}
 	close(jobChan)
 	wg.Wait()
@@ -220,7 +217,7 @@ func selectRangeTestData(rows int, N int, workers int) error {
 
 func main() {
 	log.SetLevelByString(*logLevel)
-	createTable(ForceDrop)
+	createTable(forceDrop)
 	{
 		timing("insert test data", func() {
 			insertTestData(*rows, *concurrent)
@@ -229,9 +226,9 @@ func main() {
 			timing("select point data", func() {
 				selectPointTestData(*rows, *N, *concurrent)
 			})
-			//timing("select range data", func() {
-			//selectRangeTestData(*rows, *N, *concurrent)
-			//})
+			timing("select range data", func() {
+				selectRangeTestData(*rows, *N, *concurrent)
+			})
 		}
 	}
 }
