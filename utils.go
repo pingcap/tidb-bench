@@ -51,8 +51,7 @@ func query(sqlStmt string) (*sql.Rows, error) {
 	db := connPool.Get().(*sql.DB)
 	defer connPool.Put(db)
 	log.Debug("query sql:", sqlStmt)
-	rows, err := db.Query(sqlStmt)
-	return rows, err
+	return db.Query(sqlStmt)
 }
 
 func dropTable() {

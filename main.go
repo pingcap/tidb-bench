@@ -88,7 +88,7 @@ func doBatchInsert(fromId, toId int) {
 	}
 	err := execTxn(stmts)
 	if err != nil {
-		log.Error(err)
+		log.Fatal(err)
 	}
 }
 
@@ -161,17 +161,17 @@ func insertTestData(rows int, workers int) error {
 				}
 				doBatchInsert(offset, offset+*batchSize)
 				totalDone += *batchSize
-				fmt.Printf("\r%d %%", (totalDone/rows*1.0)*100)
+				fmt.Printf("\r%d %%", int((float64(totalDone) * 100 / float64(rows))))
 			}
 		}()
 	}
-
 	for offset < rows {
 		jobChan <- offset
 		offset += *batchSize
 	}
 	close(jobChan)
 	wg.Wait()
+	fmt.Printf("\r100 %%")
 	return nil
 }
 
