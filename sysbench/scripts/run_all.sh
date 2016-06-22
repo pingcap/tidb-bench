@@ -1,5 +1,5 @@
 
-if [ $# != 9 ]; then
+if [ $# != 10 ]; then
     echo "Usage: $0 host port dbuser dbpassword tables-count table-size num-threads max-requests max-time out-log"
     exit 1
 fi
