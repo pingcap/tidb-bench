@@ -11,5 +11,5 @@ password=$4
 tcount=$5
 
 sysbench --test=./lua-tests/db/oltp.lua --mysql-host=${host} --mysql-port=${port} \
- --mysql-user=${user} --mysql-password=${password} --oltp-table-size=${tsize}  cleanup
+ --mysql-user=${user} --mysql-password=${password} --oltp-tables-count=${tcount}  cleanup
 
