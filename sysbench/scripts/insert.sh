@@ -15,4 +15,4 @@ requests=$8
 sysbench --test=./lua-tests/db/insert.lua --mysql-host=${host} --mysql-port=${port} \
  --mysql-user=${user} --mysql-password=${password} --oltp-tables-count=${tcount} \
  --oltp-table-size=${tsize} --num-threads=${threads} --report-interval=60 \
- --max-requests=${requests} --percentile=99 run
+ --max-requests=${requests} --percentile=99 run 2>&1 > insert.log &
