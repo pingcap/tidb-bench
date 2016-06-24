@@ -1,6 +1,5 @@
-
-if [ $# != 9 ]; then
-	echo "Usage: $0 host port dbuser dbpasswd tables-count table-size num-threads max-time(seconds) out-log"
+if [ $# != 8 ]; then
+	echo "Usage: $0 host port dbuser dbpasswd tables-count table-size num-threads max-requests"
 	exit 1
 fi
 
@@ -11,11 +10,9 @@ password=$4
 tcount=$5
 tsize=$6
 threads=$7
-seconds=$8
-output=$9
+requests=$8
 
 sysbench --test=./lua-tests/db/select.lua --mysql-host=${host} --mysql-port=${port} \
  --mysql-user=${user} --mysql-password=${password} --oltp-tables-count=${tcount} \
  --oltp-table-size=${tsize} --num-threads=${threads} --report-interval=60 \
- --max-time=${seconds} --percentile=99 run >> ${output}
-
+ --max-requests=${requests} --percentile=99 run 2>&1 > select.log &
