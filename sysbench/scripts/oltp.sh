@@ -14,7 +14,7 @@ seconds=$8
 
 # run
 sysbench --test=./lua-tests/db/oltp.lua --mysql-host=${host} --mysql-port=${port} \
- --mysql-user=${user} --mysql-password=${password} --oltp-tables-count=tcount \
+ --mysql-user=${user} --mysql-password=${password} --oltp-tables-count={tcount} \
  --oltp-table-size=${tsize} --num-threads=${threads} \
  --oltp-read-only=off --report-interval=60 --rand-type=uniform \
  --max-time=${seconds} --percentile=99 run 2>&1 > oltp.log &
