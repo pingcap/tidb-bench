@@ -14,7 +14,6 @@
 package main
 
 import (
-	"bytes"
 	"database/sql"
 	"flag"
 	"fmt"
@@ -73,14 +72,29 @@ func init() {
 	}
 }
 
+const baseChars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+func genRandomString(r *rand.Rand, length int) string {
+	all := []byte(baseChars)
+	l := len(all)
+	result := make([]byte, length)
+	for i := 0; i < length; i++ {
+		idx := r.Intn(l)
+		result[i] = all[idx]
+	}
+	return string(result)
+}
+
 func doBatchInsert(fromId, toId int) {
 	sqlFmt := "INSERT INTO %s VALUES %s"
 	var stmts []string
+
+	var r = rand.New(rand.NewSource(time.Now().UnixNano()))
 	for i := fromId; i < toId; i++ {
 		var strFields []string
 		for j := 0; j < *nCols; j++ {
-			buf := bytes.Repeat([]byte{'A'}, *bulkSize)
-			strFields = append(strFields, "\""+string(buf)+"\"")
+			buf := genRandomString(r, *bulkSize)
+			strFields = append(strFields, "\""+buf+"\"")
 		}
 		val := fmt.Sprintf("(%d, %s)", i, strings.Join(strFields, ","))
 		sql := fmt.Sprintf(sqlFmt, tableName, val)
