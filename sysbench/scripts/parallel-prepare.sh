@@ -1,18 +1,16 @@
+#!/bin/bash
 
-if [ $# != 7 ]; then
-	echo "Usage: $0 host port dbuser dbpasswd tables-count table-size num-threads"
-	exit 1
-fi
+set -x
 
-host=$1
-port=$2
-user=$3
-password=$4
-tcount=$5
-tsize=$6
-threads=$7
+source ./conf.sh
+
+sysbench --test=./lua-tests/db/oltp.lua --mysql-host=${host} --mysql-port=${port} \
+ --mysql-user=${user} --mysql-password=${password} --oltp-tables-count=${tcount} --mysql-db=${dbname} \
+ --oltp-table-size=0 --rand-init=on prepare
+
+sleep 2
 
 sysbench --test=./lua-tests/db/parallel_prepare.lua --mysql-host=${host} --mysql-port=${port} \
- --mysql-user=${user} --mysql-password=${password} --oltp-tables-count=${tcount} \
+ --mysql-user=${user} --mysql-password=${password} --oltp-tables-count=${tcount} --mysql-db=${dbname} \
  --oltp-table-size=${tsize} --num-threads=${threads}  --rand-init=on run
 

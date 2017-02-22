@@ -22,7 +22,7 @@ function create_insert(table_id)
    print("Creating table 'sbtest" .. i .. "'...")
    if ((db_driver == "mysql") or (db_driver == "attachsql")) then
       query = [[
-CREATE TABLE sbtest]] .. i .. [[ (
+CREATE TABLE IF NOT EXISTS sbtest]] .. i .. [[ (
 id INTEGER UNSIGNED NOT NULL ]] ..
 ((oltp_auto_inc and "AUTO_INCREMENT") or "") .. [[,
 k INTEGER UNSIGNED DEFAULT '0' NOT NULL,
@@ -35,7 +35,7 @@ pad CHAR(60) DEFAULT '' NOT NULL,
 
    elseif (db_driver == "pgsql") then
       query = [[
-CREATE TABLE sbtest]] .. i .. [[ (
+CREATE TABLE IF NOT EXISTS sbtest]] .. i .. [[ (
 id SERIAL NOT NULL,
 k INTEGER DEFAULT '0' NOT NULL,
 c CHAR(120) DEFAULT '' NOT NULL,
@@ -45,7 +45,7 @@ pad CHAR(60) DEFAULT '' NOT NULL,
 
    elseif (db_driver == "drizzle") then
       query = [[
-CREATE TABLE sbtest (
+CREATE TABLE IF NOT EXISTS sbtest (
 id INTEGER NOT NULL ]] .. ((oltp_auto_inc and "AUTO_INCREMENT") or "") .. [[,
 k INTEGER DEFAULT '0' NOT NULL,
 c CHAR(120) DEFAULT '' NOT NULL,

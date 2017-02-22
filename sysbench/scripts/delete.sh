@@ -1,19 +1,10 @@
+#!/bin/bash
 
-if [ $# != 8 ]; then
-	echo "Usage: $0 host port dbuser dbpasswd tables-count table-size num-threads max-requests"
-	exit 1
-fi
+set -x
 
-host=$1
-port=$2
-user=$3
-password=$4
-tcount=$5
-tsize=$6
-threads=$7
-requests=$8
+source ./conf.sh
 
 sysbench --test=./lua-tests/db/delete.lua --mysql-host=${host} --mysql-port=${port} \
  --mysql-user=${user} --mysql-password=${password} --oltp-tables-count=${tcount} \
  --oltp-table-size=${tsize} --num-threads=${threads} --report-interval=60 \
- --max-requests=${requests} --percentile=99 run
+ --max-requests=${requests} --max-time=${maxtime} --percentile=95 run
