@@ -6,7 +6,7 @@ password=''
 tcount=64
 tsize=500000
 threads=32
-dbname=sbtest
+dbname=test
 
 # max time in seconds
 maxtime=600
