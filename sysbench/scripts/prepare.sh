@@ -1,15 +1,8 @@
+#!/bin/bash
 
-if [ $# != 6 ]; then
-	echo "Usage: $0 host port dbuser dbpasswd tables-count table-size"
-	exit 1
-fi
+set -x
 
-host=$1
-port=$2
-user=$3
-password=$4
-tcount=$5
-tsize=$6
+source ./conf.sh
 
 sysbench --test=./lua-tests/db/oltp.lua --mysql-host=${host} --mysql-port=${port} \
  --mysql-user=${user} --mysql-password=${password} --oltp-tables-count=${tcount} \
