@@ -1,2 +1,7 @@
 # tidb-bench
-A Simple Benchmark For TiDB
+
+TiDB standard test suite.
+
+## Supports
+
+- sysbench
