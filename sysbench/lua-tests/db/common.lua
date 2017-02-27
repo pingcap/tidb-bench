@@ -19,7 +19,8 @@ function create_insert(table_id)
 
    i = table_id
 
-   print("Creating table 'sbtest" .. i .. "'...")
+   log_info("Creating table 'sbtest" .. i .. "'...")
+
    if ((db_driver == "mysql") or (db_driver == "attachsql")) then
       query = [[
 CREATE TABLE IF NOT EXISTS sbtest]] .. i .. [[ (
@@ -53,7 +54,7 @@ pad CHAR(60) DEFAULT '' NOT NULL,
 ]] .. index_name .. [[ (id)
 ) ]]
    else
-      print("Unknown database driver: " .. db_driver)
+      log_error("Unknown database driver: " .. db_driver)
       return 1
    end
 
@@ -61,7 +62,7 @@ pad CHAR(60) DEFAULT '' NOT NULL,
 
    db_query("CREATE INDEX k_" .. i .. " on sbtest" .. i .. "(k)")
 
-   print("Inserting " .. oltp_table_size .. " records into 'sbtest" .. i .. "'")
+   log_info("Inserting " .. oltp_table_size .. " records into 'sbtest" .. i .. "'")
 
    if (oltp_auto_inc) then
       db_bulk_insert_init("INSERT INTO sbtest" .. i .. "(k, c, pad) VALUES")
@@ -88,8 +89,7 @@ pad CHAR(60) DEFAULT '' NOT NULL,
    end
 
    db_bulk_insert_done()
-
-
+   
 end
 
 
@@ -116,8 +116,8 @@ function cleanup()
    set_vars()
 
    for i = 1,oltp_tables_count do
-   print("Dropping table 'sbtest" .. i .. "'...")
-   db_query("DROP TABLE sbtest".. i )
+      log_info("Dropping table 'sbtest" .. i .. "'...")
+      db_query("DROP TABLE sbtest".. i )
    end
 end
 
@@ -151,4 +151,25 @@ function set_vars()
       oltp_skip_trx = false
    end
 
+   print_lock = 0
 end
+
+
+function log_info(msg)
+   prefix = os.date("%Y/%m/%d %H:%M:%S [info] ")
+   while print_lock > 0 do
+   end
+   print_lock = 1
+   print(prefix .. msg)
+   print_lock = 0
+end
+
+function log_error(msg)
+   prefix = os.date("%Y/%m/%d %H:%M:%S [error] ")
+   while print_lock > 0 do
+   end
+   print_lock = 1
+   print(prefix .. msg)
+   print_lock = 0
+end
+

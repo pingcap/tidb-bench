@@ -15,6 +15,8 @@ function create_parallel_insert(table_id)
    local j
    local query
 
+   start_time = os.time()
+
    if (oltp_secondary) then
      index_name = "KEY xid"
    else
@@ -23,8 +25,7 @@ function create_parallel_insert(table_id)
 
    i = table_id
 
-   msg = "Inserting " .. oltp_table_size .. " records into 'sbtest" .. i .. "'"
-   print(msg)
+   log_info("Inserting " .. oltp_table_size .. " records into 'sbtest" .. i .. "'")
 
    if (oltp_auto_inc) then
       db_bulk_insert_init("INSERT INTO sbtest" .. i .. "(k, c, pad) VALUES")
@@ -48,13 +49,18 @@ function create_parallel_insert(table_id)
    end
 
    db_bulk_insert_done()
+
+   end_time = os.time()
+   log_info("Inserting 'sbtest" .. i .. "' done, within " .. os.difftime(end_time, start_time) .. " seconds")
+   
 end
 
 
 function event(thread_id)
    local index_name
    local i
-   print("thread prepare"..thread_id)
+
+   log_info("Thread prepare"..thread_id)
 
    if (oltp_secondary) then
      index_name = "KEY xid"
@@ -63,7 +69,6 @@ function event(thread_id)
    end
 
    for i=thread_id+1, oltp_tables_count, num_threads  do
-   create_parallel_insert(i)
-   end
-
+      create_parallel_insert(i)
+   end   
 end
