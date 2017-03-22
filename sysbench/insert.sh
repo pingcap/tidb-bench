@@ -2,9 +2,9 @@
 
 set -x
 
-source ./conf.sh
+. ./conf.sh
 
-sysbench --test=./lua-tests/db/insert.lua --mysql-host=${host} --mysql-port=${port} \
+sysbench --test=./lua-tests/db/insert.lua --db-driver=${driver} --mysql-host=${host} --mysql-port=${port} \
  --mysql-user=${user} --mysql-password=${password} --mysql-db=${dbname} \
  --oltp-tables-count=${tcount} --oltp-table-size=${tsize} \
  --num-threads=${threads} --report-interval=${interval} \
