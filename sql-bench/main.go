@@ -42,6 +42,19 @@ var (
 )
 
 var (
+	connPool *pool.Cache
+	statChan chan *stat
+)
+
+const (
+	statChanSize  int = 10000
+	queryChanSize int = 10000
+)
+
+func init() {
+	flag.Parse()
+	log.SetLevelByString(*logLevel)
+	statChan = make(chan *stat, statChanSize)
 	connPool = pool.NewCache("pool", *poolSize, func() interface{} {
 		db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s", *user, *password, *addr, *dbName))
 		if err != nil {
@@ -61,18 +74,15 @@ var (
 		}
 		return db
 	})
-	statChan chan *stat
-)
-
-func init() {
-	flag.Parse()
-	statChan = make(chan *stat, 10000)
 }
 
 func cleanup() {
 	// Do nothing
 	for i := 0; i < *poolSize; i++ {
-		db := connPool.Get().(*sql.DB)
+		db, ok := connPool.Get().(*sql.DB)
+		if !ok {
+			log.Fatal("The type of db getted from pool is wrong")
+		}
 		db.Close()
 	}
 }
@@ -157,27 +167,20 @@ func exec(sqlStmt string) error {
 	err := runQuery(sqlStmt, isQuery)
 	if err != nil {
 		log.Warnf("Exec sql [%s]: %s", sqlStmt, err)
+		statChan <- &stat{}
+		return err
 	}
-	spend := time.Now().Sub(startTs)
-	s := &stat{spend: spend, succ: err == nil}
-	statChan <- s
-	return err
+	statChan <- &stat{spend: time.Now().Sub(startTs), succ: true}
+	return nil
 }
 
 func runQuery(sqlStmt string, isQuery bool) error {
 	db := connPool.Get().(*sql.DB)
 	defer connPool.Put(db)
 	if isQuery {
-		rows, err := db.Query(sqlStmt)
+		_, err := db.Query(sqlStmt)
 		if err != nil {
 			return err
-		}
-		for {
-			// Get all data.
-			ok := rows.Next()
-			if !ok {
-				break
-			}
 		}
 		return nil
 	}
@@ -226,8 +229,7 @@ func statWorker(wg *sync.WaitGroup, startTs time.Time) {
 func main() {
 	// Start
 	fmt.Println("Start Bench")
-	log.SetLevelByString(*logLevel)
-	queryChan := make(chan string, 10000)
+	queryChan := make(chan string, queryChanSize)
 	wg := sync.WaitGroup{}
 	wgStat := sync.WaitGroup{}
 	// Start N workers
@@ -249,5 +251,4 @@ func main() {
 	cleanup()
 	wgStat.Wait()
 	fmt.Println("Done!")
-	return
 }
