@@ -175,7 +175,10 @@ func exec(sqlStmt string) error {
 }
 
 func runQuery(sqlStmt string, isQuery bool) error {
-	db := connPool.Get().(*sql.DB)
+	db, ok := connPool.Get().(*sql.DB)
+	if !ok {
+		log.Fatal("The type of db getted from pool is wrong")
+	}
 	defer connPool.Put(db)
 	if isQuery {
 		_, err := db.Query(sqlStmt)
