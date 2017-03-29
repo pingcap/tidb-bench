@@ -1,3 +1,5 @@
+// Copyright 2017 PingCAP, Inc.
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -81,7 +83,7 @@ func cleanup() {
 	for i := 0; i < *poolSize; i++ {
 		db, ok := connPool.Get().(*sql.DB)
 		if !ok {
-			log.Fatal("The type of db getted from pool is wrong")
+			log.Fatal("The type of db got from pool is wrong")
 		}
 		db.Close()
 	}
@@ -109,7 +111,7 @@ func readQuery(ctx context.Context, queryChan chan string) {
 		}
 		select {
 		case <-ctx.Done():
-			fmt.Printf("Get %d queries\n", cnt)
+			log.Infof("Get %d queries\n", cnt)
 			return
 		default:
 		}
@@ -127,13 +129,13 @@ LOOP:
 			}
 			select {
 			case <-ctx.Done():
-				fmt.Printf("Get %d queries\n", cnt)
+				log.Infof("Get %d queries\n", cnt)
 				return
 			default:
 			}
 		}
 	}
-	fmt.Printf("Get %d queries\n", cnt)
+	log.Infof("Get %d queries\n", cnt)
 }
 
 func worker(ctx context.Context, id int, queryChan chan string, wg *sync.WaitGroup) {
@@ -177,7 +179,7 @@ func exec(sqlStmt string) error {
 func runQuery(sqlStmt string, isQuery bool) error {
 	db, ok := connPool.Get().(*sql.DB)
 	if !ok {
-		log.Fatal("The type of db getted from pool is wrong")
+		log.Fatal("The type of db got from pool is wrong")
 	}
 	defer connPool.Put(db)
 	if isQuery {
@@ -205,7 +207,7 @@ func statWorker(wg *sync.WaitGroup, startTs time.Time) {
 	for {
 		tempExecTime := time.Now().Sub(tempStartTs)
 		if *reportInterval != 0 && tempExecTime.Seconds() >= float64(*reportInterval) {
-			fmt.Printf("Query: %d, Succ: %d, Faild: %d, Time: %v, Avg response time: %.04fms, QPS: %.02f : \n", tempTotal, tempSucc, tempTotal-tempSucc, tempExecTime, (tempSpend.Seconds()*1000)/float64(tempTotal), float64(tempTotal)/tempExecTime.Seconds())
+			log.Infof("Query: %d, Succ: %d, Faild: %d, Time: %v, Avg response time: %.04fms, QPS: %.02f : \n", tempTotal, tempSucc, tempTotal-tempSucc, tempExecTime, (tempSpend.Seconds()*1000)/float64(tempTotal), float64(tempTotal)/tempExecTime.Seconds())
 			tempStartTs = time.Now()
 			tempTotal = 0
 			tempSpend = 0
@@ -225,13 +227,13 @@ func statWorker(wg *sync.WaitGroup, startTs time.Time) {
 		tempSpend += s.spend
 	}
 	execTime := time.Now().Sub(startTs)
-	fmt.Println("\n*************************final result***************************\n")
-	fmt.Printf("Total Query: %d, Succ: %d, Faild: %d, Time: %v, Avg response time: %.04fms, QPS: %.02f : \n", total, succ, total-succ, execTime, (spend.Seconds()*1000)/float64(total), float64(total)/execTime.Seconds())
+	log.Info("\n*************************final result***************************\n")
+	log.Infof("Total Query: %d, Succ: %d, Faild: %d, Time: %v, Avg response time: %.04fms, QPS: %.02f : \n", total, succ, total-succ, execTime, (spend.Seconds()*1000)/float64(total), float64(total)/execTime.Seconds())
 }
 
 func main() {
 	// Start
-	fmt.Println("Start Bench")
+	log.Info("Start Bench")
 	queryChan := make(chan string, queryChanSize)
 	wg := sync.WaitGroup{}
 	wgStat := sync.WaitGroup{}
@@ -253,5 +255,5 @@ func main() {
 	close(statChan)
 	cleanup()
 	wgStat.Wait()
-	fmt.Println("Done!")
+	log.Info("Done!")
 }
