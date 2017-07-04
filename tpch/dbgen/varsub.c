@@ -40,9 +40,19 @@
 *
 */
 #include <stdio.h>
-#ifndef _POSIX_SOURCE
+#ifdef __APPLE__
+#include <stdlib.h>
+#elif __linux__
 #include <malloc.h>
-#endif /* POSIX_SOURCE */
+// linux
+#elif __unix__ // all unices not caught above
+#include <malloc.h>
+// Unix
+#elif defined(_POSIX_VERSION)
+#include <malloc.h>
+#else
+#   error "Unknown compiler"
+#endif
 #if (defined(_POSIX_)||!defined(WIN32))
 #include <unistd.h>
 #endif /* WIN32 */
