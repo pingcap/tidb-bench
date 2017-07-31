@@ -26,7 +26,6 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/ngaut/log"
-	"github.com/ngaut/pool"
 )
 
 var (
@@ -43,7 +42,6 @@ var (
 )
 
 var (
-	connPool *pool.Cache
 	statChan chan *stat
 	db       *sql.DB
 )
