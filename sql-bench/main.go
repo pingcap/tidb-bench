@@ -26,12 +26,10 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/ngaut/log"
-	"github.com/ngaut/pool"
 )
 
 var (
 	concurrent     = flag.Int("c", 50, "concurrent workers, default: 50")
-	poolSize       = flag.Int("pool", 100, "connection poll size, default: 200")
 	sqlCount       = flag.Int("sql-count", 0, "sql count, default read all data from file: 0")
 	maxTime        = flag.Int("max-time", 0, "exec max time, default: 0")
 	reportInterval = flag.Int("report-interval", 0, "report status interval, default: 0")
@@ -44,8 +42,8 @@ var (
 )
 
 var (
-	connPool *pool.Cache
 	statChan chan *stat
+	db       *sql.DB
 )
 
 const (
@@ -57,35 +55,10 @@ func init() {
 	flag.Parse()
 	log.SetLevelByString(*logLevel)
 	statChan = make(chan *stat, statChanSize)
-	connPool = pool.NewCache("pool", *poolSize, func() interface{} {
-		db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s", *user, *password, *addr, *dbName))
-		if err != nil {
-			log.Fatal(err)
-		}
-		var tag bool
-		for i := 0; i <= 10; i++ {
-			err = db.Ping()
-			if err == nil {
-				tag = true
-				break
-			}
-			log.Warnf("db.ping failed %v", err)
-		}
-		if tag == false {
-			log.Fatal("break done")
-		}
-		return db
-	})
-}
-
-func cleanup() {
-	// Do nothing
-	for i := 0; i < *poolSize; i++ {
-		db, ok := connPool.Get().(*sql.DB)
-		if !ok {
-			log.Fatal("The type of db got from pool is wrong")
-		}
-		db.Close()
+	var err error
+	db, err = sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s", *user, *password, *addr, *dbName))
+	if err != nil {
+		log.Fatal(err)
 	}
 }
 
@@ -177,13 +150,9 @@ func exec(sqlStmt string) error {
 }
 
 func runQuery(sqlStmt string, isQuery bool) error {
-	db, ok := connPool.Get().(*sql.DB)
-	if !ok {
-		log.Fatal("The type of db got from pool is wrong")
-	}
-	defer connPool.Put(db)
 	if isQuery {
-		_, err := db.Query(sqlStmt)
+		rows, err := db.Query(sqlStmt)
+		defer rows.Close()
 		if err != nil {
 			return err
 		}
@@ -253,7 +222,6 @@ func main() {
 	go readQuery(ctxR, queryChan)
 	wg.Wait()
 	close(statChan)
-	cleanup()
 	wgStat.Wait()
 	log.Info("Done!")
 }
