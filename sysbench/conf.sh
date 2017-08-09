@@ -4,7 +4,7 @@ port=4000
 user=root
 password=''
 tcount=16
-tsize=500000
+tsize=1000000
 threads=256
 dbname=sbtest1
 
