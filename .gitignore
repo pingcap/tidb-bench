@@ -24,3 +24,7 @@ _testmain.go
 *.prof
 
 *.swp
+
+tpch/dbgen/dbgen
+tpch/dbgen/qgen
+tpch/scripts/
