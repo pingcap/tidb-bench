@@ -3,7 +3,7 @@ source _msq.sh
 
 ensure_database()
 {
-	  $MYSQL_BIN -e "CREATE DATABASE IF NOT EXISTS $database"
+	  $MYSQL_BIN -e "CREATE DATABASE IF NOT EXISTS $DATABASE"
 }
 export -f ensure_database
 
