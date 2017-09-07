@@ -59,7 +59,8 @@ end
 function event(thread_id)
    local index_name
    local i
-
+   local tb
+   
    log_info("Thread prepare"..thread_id)
 
    if (oltp_secondary) then
@@ -68,7 +69,11 @@ function event(thread_id)
      index_name = "PRIMARY KEY"
    end
 
-   for i=thread_id+1, oltp_tables_count, num_threads  do
-      create_parallel_insert(i)
-   end   
+ --  for i=thread_id+1, oltp_tables_count, num_threads  do
+ --     create_parallel_insert(i)
+ --  end   
+
+   tb = (thread_id%oltp_tables_count)+1
+   create_parallel_insert(tb)
+
 end
