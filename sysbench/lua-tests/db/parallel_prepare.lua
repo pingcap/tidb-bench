@@ -36,15 +36,15 @@ function create_parallel_insert(table_id)
    local c_val
    local pad_val
 
-   for j = 1,oltp_table_size do
+   for j = thread_id*oltp_table_size, (thread_id+1)*oltp_table_size do
 
    c_val = sb_rand_str([[###########-###########-###########-###########-###########-###########-###########-###########-###########-###########]])
    pad_val = sb_rand_str([[###########-###########-###########-###########-###########]])
 
    if (oltp_auto_inc) then
-	 db_bulk_insert_next("(" .. sb_rand(1, oltp_table_size) .. ", '".. c_val .."', '" .. pad_val .. "')")
+	 db_bulk_insert_next("(" .. sb_rand(thread_id*oltp_table_size,(thread_id+1)*oltp_table_size) .. ", '".. c_val .."', '" .. pad_val .. "')")
       else
-	 db_bulk_insert_next("("..j.."," .. sb_rand(1, oltp_table_size) .. ",'".. c_val .."', '" .. pad_val .. "'  )")
+	 db_bulk_insert_next("("..j.."," .. sb_rand(thread_id*oltp_table_size,(thread_id+1)*oltp_table_size) .. ",'".. c_val .."', '" .. pad_val .. "'  )")
       end
    end
 
