@@ -27,3 +27,4 @@ _testmain.go
 
 tpch/dbgen/dbgen
 tpch/dbgen/qgen
+tpch/scripts/tpch*
