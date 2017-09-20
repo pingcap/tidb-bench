@@ -88,8 +88,16 @@ func (t *Table) Insert(r *rand.Rand, id uint64) error {
 	return err
 }
 
-func (t *Table) Select(r *rand.Rand, id uint64) error {
+func (t *Table) Select(r *rand.Rand, id uint64) (bool, error) {
 	stmt := fmt.Sprintf("SELECT * FROM `%s` WHERE id = ?", t.table)
-	_, err := t.db.Exec(stmt, id)
-	return err
+	rows, err := t.db.Query(stmt, id)
+	if err != nil {
+		return false, err
+	}
+	defer rows.Close()
+	rowsFound := 0
+	for rows.Next() {
+		rowsFound++
+	}
+	return rowsFound != 0, nil
 }

@@ -1,8 +1,8 @@
 db = "root@tcp(127.0.0.1:4000)/test"
 data-size = 1000
-num-tables = 100
-num-workers = 10000
+num-tables = 1
+num-workers = 1000
 
 [workload]
-insert-ratio = 0.5
-select-ratio = 0.5
+insert-ratio = 0.2
+select-ratio = 0.8

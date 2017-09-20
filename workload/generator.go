@@ -20,26 +20,22 @@ import (
 
 type Generator interface {
 	NextID() uint64
-	RandID() uint64
+	RandID(*rand.Rand) uint64
 }
 
 type UniformGenerator struct {
 	maxID uint64
-	r     *rand.Rand
 }
 
 func NewUniformGenerator(maxID uint64) *UniformGenerator {
-	return &UniformGenerator{
-		maxID: maxID,
-		r:     NewSeekedRander(),
-	}
+	return &UniformGenerator{maxID: maxID}
 }
 
 func (g *UniformGenerator) NextID() uint64 {
 	return atomic.AddUint64(&g.maxID, 1)
 }
 
-func (g *UniformGenerator) RandID() uint64 {
+func (g *UniformGenerator) RandID(r *rand.Rand) uint64 {
 	maxID := atomic.LoadUint64(&g.maxID)
-	return uint64(g.r.Int63n(int64(maxID + 1)))
+	return uint64(r.Int63n(int64(maxID + 1)))
 }

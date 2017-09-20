@@ -17,6 +17,7 @@ import (
 	"context"
 	"flag"
 	"math/rand"
+	"strings"
 	"sync"
 
 	"github.com/BurntSushi/toml"
@@ -59,7 +60,7 @@ func (w *Worker) Run(ctx context.Context) {
 		case SelectOP:
 			err = w.db.Select(w.r)
 		}
-		if err != nil {
+		if err != nil && !strings.Contains(err.Error(), "EOF") {
 			log.Error(err)
 		}
 	}
@@ -73,7 +74,7 @@ func main() {
 	toml.DecodeFile(*cfgFile, cfg)
 	log.Infof("Load configuration from %s: %+v", *cfgFile, cfg)
 
-	db, err := NewDB(cfg.DB, cfg.DataSize, cfg.NumTables)
+	db, err := NewDB(cfg.DB, cfg.DataSize, cfg.NumTables, cfg.NumWorkers)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -27,14 +27,14 @@ type DB struct {
 	generators []Generator
 }
 
-func NewDB(dbURL string, dataSize, numTables int) (*DB, error) {
+func NewDB(dbURL string, dataSize, numTables, maxConns int) (*DB, error) {
 	db, err := sql.Open("mysql", dbURL)
 	if err != nil {
 		return nil, err
 	}
 
-	db.SetMaxOpenConns(4096)
-	db.SetMaxIdleConns(4096)
+	db.SetMaxOpenConns(maxConns)
+	db.SetMaxIdleConns(maxConns)
 
 	tables := make([]*Table, numTables)
 	generators := make([]Generator, numTables)
@@ -69,5 +69,6 @@ func (db *DB) Insert(r *rand.Rand) error {
 
 func (db *DB) Select(r *rand.Rand) error {
 	t, g := db.rand(r)
-	return t.Select(r, g.RandID())
+	_, err := t.Select(r, g.RandID(r))
+	return err
 }
