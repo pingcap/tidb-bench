@@ -18,7 +18,7 @@ import (
 	"math/rand"
 
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/ngaut/log"
+	log "github.com/sirupsen/logrus"
 )
 
 type DB struct {
@@ -27,14 +27,14 @@ type DB struct {
 	generators []Generator
 }
 
-func NewDB(dbURL string, dataSize, numTables, maxConns int) (*DB, error) {
+func NewDB(dbURL string, dataSize, numTables int) (*DB, error) {
 	db, err := sql.Open("mysql", dbURL)
 	if err != nil {
 		return nil, err
 	}
 
-	db.SetMaxOpenConns(maxConns)
-	db.SetMaxIdleConns(maxConns)
+	db.SetMaxOpenConns(1024)
+	db.SetMaxIdleConns(1024)
 
 	tables := make([]*Table, numTables)
 	generators := make([]Generator, numTables)
@@ -44,7 +44,10 @@ func NewDB(dbURL string, dataSize, numTables, maxConns int) (*DB, error) {
 		if err != nil {
 			return nil, err
 		}
-		maxID := table.MaxID()
+		maxID, err := table.MaxID()
+		if err != nil {
+			return nil, err
+		}
 		tables[i] = table
 		generators[i] = NewUniformGenerator(maxID)
 		log.Infof("New tableID %d maxID %d", tableID, maxID)

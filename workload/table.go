@@ -18,6 +18,8 @@ import (
 	"fmt"
 	"math/rand"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -73,11 +75,21 @@ func NewTable(db *sql.DB, tableID, dataSize int) (*Table, error) {
 	}, nil
 }
 
-func (t *Table) MaxID() uint64 {
-	stmt := fmt.Sprintf("SELECT MAX(id) FROM `%s`", t.table)
+func (t *Table) MaxID() (uint64, error) {
+	// TODO: use MAX(id)
+	stmt := fmt.Sprintf("SELECT id FROM `%s` ORDER BY id DESC LIMIT 1", t.table)
+	rows, err := t.db.Query(stmt)
+	if err != nil {
+		return 0, err
+	}
+	defer rows.Close()
 	var id uint64
-	t.db.QueryRow(stmt).Scan(&id)
-	return id
+	for rows.Next() {
+		if err := rows.Scan(&id); err != nil {
+			return 0, err
+		}
+	}
+	return id, nil
 }
 
 func (t *Table) Insert(r *rand.Rand, id uint64) error {
@@ -85,13 +97,24 @@ func (t *Table) Insert(r *rand.Rand, id uint64) error {
 	data := RandomAsciiBytes(r, t.dataSize)
 	stmt := fmt.Sprintf("INSERT INTO `%s` VALUES (?, ?, ?, ?)", t.table)
 	_, err := t.db.Exec(stmt, id, id, pad, data)
-	return err
+	if err != nil {
+		log.WithFields(log.Fields{
+			"stmt": stmt,
+			"id":   id,
+		}).Error(err)
+		return err
+	}
+	return nil
 }
 
 func (t *Table) Select(r *rand.Rand, id uint64) (bool, error) {
 	stmt := fmt.Sprintf("SELECT * FROM `%s` WHERE id = ?", t.table)
 	rows, err := t.db.Query(stmt, id)
 	if err != nil {
+		log.WithFields(log.Fields{
+			"stmt": stmt,
+			"id":   id,
+		}).Error(err)
 		return false, err
 	}
 	defer rows.Close()
