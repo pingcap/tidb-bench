@@ -28,3 +28,9 @@ _testmain.go
 tpch/dbgen/dbgen
 tpch/dbgen/qgen
 tpch/scripts/tpch*
+
+store_bench/store_bench
+store_bench/Makefile
+CMakeCache.txt
+CMakeFiles
+cmake_install.cmake
