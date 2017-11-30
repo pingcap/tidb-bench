@@ -8,15 +8,20 @@ using namespace std;
 using namespace rocksdb;
 
 DEFINE_string(path, "/tmp/store_bench", "the path of the store.");
-DEFINE_string(run, "get", "the work type to run, can be get/seek/put/load");
+DEFINE_string(run, "get", "the work type to run, can be get/seek/load/txn/txn2/txn3");
 DEFINE_int32(threads, 8, "number of threads to run");
 DEFINE_int32(nop, 1024 *16, "number of ops to run for each thread.");
 DEFINE_int32(num, 1024*1024*16, "number of key/value pairs.");
+DEFINE_int32(vallen, 64, "value length.");
 
 vector<mt19937_64> rgen(24);
 
 DB *db;
 vector<ColumnFamilyHandle*> cfh;
+ColumnFamilyHandle *lockCF;
+ColumnFamilyHandle *writeCF;
+ColumnFamilyHandle *dataCF;
+ColumnFamilyHandle *oldCF;
 
 struct Params {
     int tid;
@@ -37,7 +42,7 @@ void fillKey(Params *p, uint64_t id) {
 // fill 64 bytes value with i.
 void fillVal(Params *p, uint64_t id) {
     *(uint64_t *)p->valBuf = id;
-    for (int i = 8; i < 64; i+= 8) {
+    for (int i = 8; i < FLAGS_vallen-7; i+= 8) {
         *(uint64_t *)(p->valBuf+i) = rgen[p->tid]();
     }
 }
@@ -53,22 +58,92 @@ void doLoad(Params *p) {
         fillVal(p, uint64_t(i));
         Slice key(p->keyBuf, 16);
         Slice val(p->valBuf, 64);
-        Status s = db->Put(WriteOptions(), key, val);
-        assert(s.ok());
+        auto batch = WriteBatch();
+        batch.Put(writeCF, key, key);
+        batch.Put(dataCF, key, val);
+        db->Write(WriteOptions(), &batch);
     }
 }
 
-// put data randomly.
-void doPut(Params *p) {
+// Current transaction flow.
+void doTxn(Params *p) {
     for (int i = 0; i < p->n; i++) {
         fillKey(p, randKeyID(p->tid));
         fillVal(p, uint64_t(i));
         Slice key(p->keyBuf, 16);
         Slice val(p->valBuf, 64);
-        Status s = db->Put(WriteOptions(), key, val);
-        assert(s.ok());
+        string oVal;
+        // 1. The presume not exists.
+        db->Get(ReadOptions(), lockCF, key, &oVal);
+        db->Get(ReadOptions(), writeCF, key, &oVal);
+        db->Get(ReadOptions(), dataCF, key, &oVal);
+
+        // 2. prewrite.
+        db->Get(ReadOptions(), lockCF, key, &oVal);
+        db->Get(ReadOptions(), writeCF, key, &oVal);
+        auto batch = WriteBatch();
+        batch.Put(lockCF, key, key);
+        batch.Put(dataCF, key, val);
+        db->Write(WriteOptions(), &batch);
+
+        // 3. commit.
+        db->Get(ReadOptions(), lockCF, key, &oVal);
+        batch.Clear();
+        batch.Delete(lockCF, key);
+        batch.Put(writeCF, key, val);
+        db->Write(WriteOptions(), &batch);
     }
 }
+
+// New transaction flow insert.
+void doTxn2(Params *p) {
+    for (int i = 0; i < p->n; i++) {
+        fillKey(p, randKeyID(p->tid));
+        fillVal(p, uint64_t(i));
+        Slice key(p->keyBuf, 16);
+        Slice val(p->valBuf, 64);
+        string oVal;
+        // 1. Get the latest version.
+        db->Get(ReadOptions(), writeCF, key, &oVal);
+        db->Get(ReadOptions(), dataCF, key, &oVal);
+        // 2. Prewrite
+        db->Get(ReadOptions(), writeCF, key, &oVal);
+        auto batch = WriteBatch();
+        batch.Put(writeCF, key, key);
+        batch.Put(dataCF, key, val);
+        db->Write(WriteOptions(), &batch);
+
+        // 2. Commit
+        db->Get(ReadOptions(), writeCF, key, &oVal);
+        db->Put(WriteOptions(), writeCF, key, key);
+    }
+}
+
+// New transaction flow update.
+void doTxn3(Params *p) {
+    for (int i = 0; i < p->n; i++) {
+        fillKey(p, randKeyID(p->tid));
+        fillVal(p, uint64_t(i));
+        Slice key(p->keyBuf, 16);
+        Slice val(p->valBuf, 64);
+        string oVal;
+        // 1. Get the latest version.
+        db->Get(ReadOptions(), writeCF, key, &oVal);
+        db->Get(ReadOptions(), dataCF, key, &oVal);
+        // 2. Prewrite
+        db->Get(ReadOptions(), writeCF, key, &oVal);
+        auto batch = WriteBatch();
+        batch.Put(writeCF, key, key);
+        batch.Put(dataCF, key, val);
+        batch.Put(oldCF, key, key);
+        db->Write(WriteOptions(), &batch);
+
+        // 2. Commit
+        db->Get(ReadOptions(), writeCF, key, &oVal);
+        db->Put(WriteOptions(), writeCF, key, key);
+    }
+}
+
 
 // get data randomly.
 void doGet(Params *p) {
@@ -101,10 +176,14 @@ void doWork(Params *p) {
         doLoad(p);
     } else if (p->workType == "get") {
         doGet(p);
-    } else if (p->workType == "put") {
-        doPut(p);
     } else if (p->workType == "seek") {
         doSeek(p);
+    } else if (p->workType == "txn") {
+        doTxn(p);
+    } else if (p->workType == "txn2") {
+        doTxn2(p);
+    } else if (p->workType == "txn3") {
+        doTxn3(p);
     }
 }
 
@@ -128,11 +207,15 @@ void openDB() {
     }
     vector<ColumnFamilyDescriptor> cfs;
     cfs.emplace_back(kDefaultColumnFamilyName, ColumnFamilyOptions());
-    cfs.emplace_back("old", ColumnFamilyOptions());
-    cfs.emplace_back("delete", ColumnFamilyOptions());
+    cfs.emplace_back("lock", ColumnFamilyOptions());
     cfs.emplace_back("data", ColumnFamilyOptions());
+    cfs.emplace_back("old", ColumnFamilyOptions());
     Status s = DB::Open(options, FLAGS_path, cfs, &cfh, &db);
     assert(s.ok());
+    writeCF = cfh[0];
+    lockCF = cfh[1];
+    dataCF = cfh[2];
+    oldCF = cfh[3];
 }
 
 void run() {
