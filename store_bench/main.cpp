@@ -1,5 +1,7 @@
 #include <iostream>
 #include "rocksdb/db.h"
+#include "rocksdb/table.h"
+#include "rocksdb/filter_policy.h"
 #include <sys/time.h>
 #include <random>
 #include <gflags/gflags.h>
@@ -7,14 +9,17 @@
 using namespace std;
 using namespace rocksdb;
 
-DEFINE_string(path, "/tmp/store_bench", "the path of the store.");
-DEFINE_string(run, "get", "the work type to run, can be get/seek/load/txn/txn2/txn3");
-DEFINE_int32(threads, 8, "number of threads to run");
-DEFINE_int32(nop, 1024 *16, "number of ops to run for each thread.");
-DEFINE_int32(num, 1024*1024*16, "number of key/value pairs.");
-DEFINE_int32(vallen, 64, "value length.");
+const int Kilo = 1024;
+const int Mega = 1024*1024;
 
-vector<mt19937_64> rgen(24);
+DEFINE_string(path, "/tmp/store_bench", "the path of the store.");
+DEFINE_string(run, "get", "the work type to run, can be one of (load/get/insert/update/new_get/new_insert/new_update)");
+DEFINE_int32(threads, 8, "number of threads to run");
+DEFINE_int32(loops, 256*Kilo, "number of loops to run for each thread.");
+DEFINE_int32(num, 16*Mega, "number of key/value pairs.");
+DEFINE_int32(vallen, 128, "value length.");
+
+vector<mt19937_64> rgen;
 
 DB *db;
 vector<ColumnFamilyHandle*> cfh;
@@ -22,10 +27,12 @@ ColumnFamilyHandle *lockCF;
 ColumnFamilyHandle *writeCF;
 ColumnFamilyHandle *dataCF;
 ColumnFamilyHandle *oldCF;
+shared_ptr<Cache> cache;
+shared_ptr<const FilterPolicy> filterPolicy(NewBloomFilterPolicy(10, false));
 
 struct Params {
     int tid;
-    int n;
+    int loops;
     char *keyBuf;
     char *valBuf;
     string workType;
@@ -57,7 +64,7 @@ void doLoad(Params *p) {
         fillKey(p, uint64_t(i));
         fillVal(p, uint64_t(i));
         Slice key(p->keyBuf, 16);
-        Slice val(p->valBuf, 64);
+        Slice val(p->valBuf, FLAGS_vallen);
         auto batch = WriteBatch();
         batch.Put(writeCF, key, key);
         batch.Put(dataCF, key, val);
@@ -65,13 +72,13 @@ void doLoad(Params *p) {
     }
 }
 
-// Current transaction flow.
-void doTxn(Params *p) {
-    for (int i = 0; i < p->n; i++) {
+// Current update flow, same as insert.
+void doUpdate(Params *p) {
+    for (int i = 0; i < p->loops; i++) {
         fillKey(p, randKeyID(p->tid));
         fillVal(p, uint64_t(i));
         Slice key(p->keyBuf, 16);
-        Slice val(p->valBuf, 64);
+        Slice val(p->valBuf, FLAGS_vallen);
         string oVal;
         // 1. The presume not exists.
         db->Get(ReadOptions(), lockCF, key, &oVal);
@@ -90,18 +97,18 @@ void doTxn(Params *p) {
         db->Get(ReadOptions(), lockCF, key, &oVal);
         batch.Clear();
         batch.Delete(lockCF, key);
-        batch.Put(writeCF, key, val);
+        batch.Put(writeCF, key, key);
         db->Write(WriteOptions(), &batch);
     }
 }
 
 // New transaction flow insert.
-void doTxn2(Params *p) {
-    for (int i = 0; i < p->n; i++) {
+void doNewInsert(Params *p) {
+    for (int i = 0; i < p->loops; i++) {
         fillKey(p, randKeyID(p->tid));
         fillVal(p, uint64_t(i));
         Slice key(p->keyBuf, 16);
-        Slice val(p->valBuf, 64);
+        Slice val(p->valBuf, FLAGS_vallen);
         string oVal;
         // 1. Get the latest version.
         db->Get(ReadOptions(), writeCF, key, &oVal);
@@ -120,12 +127,12 @@ void doTxn2(Params *p) {
 }
 
 // New transaction flow update.
-void doTxn3(Params *p) {
-    for (int i = 0; i < p->n; i++) {
+void doNewUpdate(Params *p) {
+    for (int i = 0; i < p->loops; i++) {
         fillKey(p, randKeyID(p->tid));
         fillVal(p, uint64_t(i));
         Slice key(p->keyBuf, 16);
-        Slice val(p->valBuf, 64);
+        Slice val(p->valBuf, FLAGS_vallen);
         string oVal;
         // 1. Get the latest version.
         db->Get(ReadOptions(), writeCF, key, &oVal);
@@ -144,31 +151,27 @@ void doTxn3(Params *p) {
     }
 }
 
-
-// get data randomly.
 void doGet(Params *p) {
-    for (int i = 0; i < p->n; i++) {
+    for (int i = 0; i < p->loops; i++) {
         fillKey(p, randKeyID(p->tid));
         Slice key(p->keyBuf, 16);
         string val;
-        db->Get(ReadOptions(), key, &val);
-        assert(val.size() == 64);
+        db->Get(ReadOptions(), lockCF, key, &val);
+        Iterator *it = db->NewIterator(ReadOptions(), writeCF);
+        it->Seek(Slice(p->keyBuf, 20));
+        delete it;
+        db->Get(ReadOptions(), dataCF, key, &val);
     }
 }
 
-// seek randomly
-void doSeek(Params *p) {
-    Iterator *it = db->NewIterator(ReadOptions());
-    for (int i = 0; i < p->n; i++) {
+void doNewGet(Params *p) {
+    for (int i = 0; i < p->loops; i++) {
         fillKey(p, randKeyID(p->tid));
-        Slice key(p->keyBuf, 20);
+        Slice key(p->keyBuf, 16);
         string val;
-        it->Seek(key);
-        it->key();
-        assert(it->key().size() == 16);
-        assert(it->value().size() == 64);
+        db->Get(ReadOptions(), writeCF, key, &val);
+        db->Get(ReadOptions(), dataCF, key, &val);
     }
-    delete it;
 }
 
 void doWork(Params *p) {
@@ -176,14 +179,14 @@ void doWork(Params *p) {
         doLoad(p);
     } else if (p->workType == "get") {
         doGet(p);
-    } else if (p->workType == "seek") {
-        doSeek(p);
-    } else if (p->workType == "txn") {
-        doTxn(p);
-    } else if (p->workType == "txn2") {
-        doTxn2(p);
-    } else if (p->workType == "txn3") {
-        doTxn3(p);
+    } else if (p->workType == "new_get") {
+        doNewGet(p);
+    } else if (p->workType == "insert" || p->workType == "update") {
+        doUpdate(p);
+    } else if (p->workType == "new_insert") {
+        doNewInsert(p);
+    } else if (p->workType == "new_update") {
+        doNewUpdate(p);
     }
 }
 
@@ -196,15 +199,26 @@ void *work(void *params) {
     doWork(p);
     gettimeofday(&end, nullptr);
     dur = 1000000 * (end.tv_sec-start.tv_sec)+ end.tv_usec-start.tv_usec;
-    cout << double(dur)/(p->n) << " us/op" << endl;
+    cout << double(dur)/(p->loops) << " us/op" << endl;
 }
 
 void openDB() {
     Options options;
+    options.max_background_jobs = 8;
     if (FLAGS_run == "load") {
         options.create_if_missing = true;
         options.create_missing_column_families = true;
     }
+    options.max_manifest_file_size = 20*Mega;
+    options.enable_pipelined_write = true;
+    BlockBasedTableOptions blockOpts;
+    blockOpts.block_size = 64*Kilo;
+    cache = NewLRUCache((size_t)256*Mega, 6, false);
+    blockOpts.block_cache = cache;
+    blockOpts.filter_policy = filterPolicy;
+    options.table_factory.reset(NewBlockBasedTableFactory(blockOpts));
+    options.write_buffer_size = 128*Mega;
+
     vector<ColumnFamilyDescriptor> cfs;
     cfs.emplace_back(kDefaultColumnFamilyName, ColumnFamilyOptions());
     cfs.emplace_back("lock", ColumnFamilyOptions());
@@ -229,12 +243,12 @@ void run() {
         params->tid = i;
         params->workType = workType;
         if (workType == "load") {
-            params->n = FLAGS_num / nthreads;
+            params->loops = FLAGS_num / nthreads;
         } else {
-            params->n = FLAGS_nop;
+            params->loops = FLAGS_loops;
         }
         params->keyBuf = (char *)malloc(20);
-        params->valBuf = (char *)malloc(64);
+        params->valBuf = (char *)malloc(FLAGS_vallen);
         pthread_create(&threads[i], nullptr, &work, params);
     };
 
@@ -242,7 +256,7 @@ void run() {
         pthread_join(threads[i], nullptr);
     };
     gettimeofday(&end, nullptr);
-    int totalOps = nthreads * FLAGS_nop;
+    int totalOps = nthreads * FLAGS_loops;
     if (workType == "load") {
         totalOps = FLAGS_num;
     }
@@ -251,8 +265,8 @@ void run() {
 }
 
 void initRands() {
-    for (unsigned long i=0; i<24; i++) {
-        rgen[i] = mt19937_64(i*31);
+    for (unsigned long i=0; i<FLAGS_threads; i++) {
+        rgen.emplace_back(mt19937_64(i*31));
     }
 }
 
