@@ -84,7 +84,9 @@ void doUpdate(Params *p) {
         string oVal;
         // 1. The presume not exists.
         db->Get(ReadOptions(), lockCF, key, &oVal);
-        db->Get(ReadOptions(), writeCF, key, &oVal);
+        Iterator *it = db->NewIterator(ReadOptions(), writeCF);
+        it->Seek(Slice(p->keyBuf, 20));
+        delete it;
         db->Get(ReadOptions(), dataCF, key, &oVal);
 
         // 2. prewrite.
