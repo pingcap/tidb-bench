@@ -2,6 +2,7 @@
 #include "rocksdb/db.h"
 #include "rocksdb/table.h"
 #include "rocksdb/filter_policy.h"
+#include "rocksdb/slice_transform.h"
 #include <sys/time.h>
 #include <random>
 #include <gflags/gflags.h>
@@ -29,6 +30,7 @@ ColumnFamilyHandle *dataCF;
 ColumnFamilyHandle *oldCF;
 shared_ptr<Cache> cache;
 shared_ptr<const FilterPolicy> filterPolicy(NewBloomFilterPolicy(10, false));
+shared_ptr<const SliceTransform> sliceTransform(NewFixedPrefixTransform(16));
 
 struct Params {
     int tid;
@@ -218,6 +220,7 @@ void openDB() {
     blockOpts.filter_policy = filterPolicy;
     options.table_factory.reset(NewBlockBasedTableFactory(blockOpts));
     options.write_buffer_size = 128*Mega;
+    options.prefix_extractor = sliceTransform;
 
     vector<ColumnFamilyDescriptor> cfs;
     cfs.emplace_back(kDefaultColumnFamilyName, ColumnFamilyOptions());
