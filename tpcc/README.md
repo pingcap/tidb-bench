@@ -1,13 +1,13 @@
 1. Build binaries
    * `cd src ; make`
-   ( you should have mysql_config available in $PATH)
+   (you should have mysql_config available in $PATH)
 
 2. Load data
    * create database
      `mysqladmin create tpcc100`
    * create tables
      `mysql tpcc100 < create_table.sql`
-   * create indexes and FK ( this step can be done after loading data)
+   * create indexes (this step can be done after loading data), no foreign keys here.
      `mysql tpcc100 < add_idx.sql`
    * populate data
      - simple step
@@ -18,6 +18,7 @@
        check load.sh script
 
 3. Start benchmark
+   * TiDB uses OCC transaction model, `SELECT FOR UPDATE` won't add locks on tuples, so we remove them in tpcc test.
    * `./tpcc_start -h127.0.0.1 -P4000 -dtpcc100 -uroot -w100 -c32 -r10 -l10800`
    * |hostname| |port| |dbname| |user| |WAREHOUSES| |CONNECTIONS| |WARMUP TIME| |BENCHMARK TIME|
    * ref. tpcc_start --help for all options 
