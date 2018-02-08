@@ -1,8 +1,7 @@
 export LD_LIBRARY_PATH=/usr/local/mysql/lib/mysql/
-DBNAME=tpcc100
-WH=10
-HOST=172.233.1.119
-#HOST=127.0.0.1
+DBNAME=$1
+WH=100
+HOST=127.0.0.1
 PORT=4000
 STEP=5
 
