@@ -2,8 +2,7 @@
 
 The official TPC-DS tools can be found at [tpc.org](http://www.tpc.org/tpc_documents_current_versions/current_specifications.asp).
 
-This version is based on v2.7.0 and has been modified to:
-
+This tpcds-kit is ported from [gregrahn/tpcds-kit](https://github.com/gregrahn/tpcds-kit), thanks to [gregrahn](https://github.com/gregrahn), this version is based on v2.7.0 and has been modified to:
 * Allow compilation under macOS (commit [2ec45c5](https://github.com/gregrahn/tpcds-kit/commit/2ec45c5ed97cc860819ee630770231eac738097c))
 * Address obvious query template bugs like
   * https://github.com/gregrahn/tpcds-kit/issues/30
@@ -59,10 +58,10 @@ Examples:
 cd tools && ./dsdgen -sc $SCALE -f && cd -
 ```
 
-*load_data.sh* is used to build tools, generate data and load data.
+**load_data.sh** is used to build tools, generate data and load data.
 
 ### Query generation
 
 Query generation is done via `dsqgen`.   See `dsqgen --help` for all options.
 
-*tools/genquery.sh* is used to generate queries based on query templetes.
+**tools/genquery.sh** is used to generate queries based on query templetes.
