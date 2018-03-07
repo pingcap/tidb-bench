@@ -4,4 +4,8 @@ TiDB standard test suite.
 
 ## Supports
 
-- sysbench
+- [sql-bench](./sql-bench)
+- [sysbench](./sysbench)
+- [tpcc](./tpcc)
+- [tpcds](./tpcds)
+- [tpch](./tpch)
