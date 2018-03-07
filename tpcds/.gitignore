@@ -31,8 +31,6 @@ y.tab.h
 y.tab.c
 y.output
 tokenizer.c
-dsqgen
-dsdgen
 checksum
 .ctags_updated
 tags
