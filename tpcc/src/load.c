@@ -399,8 +399,10 @@ retry:
 			printf(".");
 			fflush(stdout);
 
-			if (!(i_id % 5000))
+			if (!(i_id % 5000)) {
 				printf(" %ld\n", i_id);
+				if( mysql_commit(mysql) ) goto sqlerr;
+			}
 		}
 	}
 
@@ -702,8 +704,10 @@ retry:
 		if (!(s_i_id % 100)) {
 			printf(".");
 			fflush(stdout);
-			if (!(s_i_id % 5000))
+			if (!(s_i_id % 5000)) {
 				printf(" %ld\n", s_i_id);
+				if( mysql_commit(mysql) ) goto sqlerr;
+			}
 		}
 	}
 
