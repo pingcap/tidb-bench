@@ -1,3 +1,7 @@
+0. TiDB setting requirements
+   * set `stmt-count-limit = 100000000` in TiDB config file
+   * restart TiDB
+
 1. Build binaries
    * `cd src ; make`
    (you should have mysql_config available in $PATH)
