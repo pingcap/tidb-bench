@@ -15,16 +15,16 @@
      `mysql tpcc1000 < add_idx.sql`
    * populate data
      - simple step
-       `tpcc_load -h127.0.0.1 -d tpcc1000 -u root -p "" -w 1000`
-                 |hostname:port| |dbname| |user| |password| |WAREHOUSES|
+       `./tpcc_load -h127.0.0.1 -P4000 -d tpcc1000 -u root -p "" -w 1000`
+                 |hostname| |port| |dbname| |user| |password| |WAREHOUSES|
        ref. tpcc_load --help for all options
      - load data in parallel 
        check load.sh script
 
 3. Start benchmark
    * TiDB uses OCC transaction model, `SELECT FOR UPDATE` won't add locks on tuples, so we remove them in tpcc test.
-   * `./tpcc_start -h127.0.0.1 -P4000 -dtpcc1000 -uroot -w1000 -c32 -r10 -l10800`
-   * |hostname| |port| |dbname| |user| |WAREHOUSES| |CONNECTIONS| |WARMUP TIME| |BENCHMARK TIME|
+   * `./tpcc_start -h127.0.0.1 -P4000 -d tpcc1000 -uroot -p "" -w1000 -c32 -r10 -l10800`
+   * |hostname| |port| |dbname| |user| |password| |WAREHOUSES| |CONNECTIONS| |WARMUP TIME| |BENCHMARK TIME|
    * ref. tpcc_start --help for all options 
 
 Output
