@@ -399,11 +399,8 @@ retry:
 			printf(".");
 			fflush(stdout);
 
-			if (!(i_id % 4000)) {
+			if (!(i_id % 5000))
 				printf(" %ld\n", i_id);
-				if( mysql_commit(mysql) ) goto sqlerr;
-			}
-			  
 		}
 	}
 
@@ -705,10 +702,8 @@ retry:
 		if (!(s_i_id % 100)) {
 			printf(".");
 			fflush(stdout);
-			if (!(s_i_id % 4000)) {
+			if (!(s_i_id % 5000))
 				printf(" %ld\n", s_i_id);
-				mysql_commit(mysql);
-			}
 		}
 	}
 
@@ -996,7 +991,6 @@ retry:
  			printf(".");
 			fflush(stdout);
 			if (!(c_id % 1000))
-				if( mysql_commit(mysql) ) goto sqlerr;
 				printf(" %ld\n", c_id);
 		}
 	}
@@ -1214,8 +1208,7 @@ retry:
 			printf(".");
 			fflush(stdout);
 
- 			if (!(o_id % 400))
-				if( mysql_commit(mysql) ) goto sqlerr;
+ 			if (!(o_id % 1000))
 				printf(" %ld\n", o_id);
 		}
 	}

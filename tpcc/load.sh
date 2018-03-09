@@ -1,6 +1,6 @@
 export LD_LIBRARY_PATH=/usr/local/mysql/lib/mysql/
 DBNAME=$1
-WH=100
+WH=1000
 HOST=127.0.0.1
 PORT=4000
 STEP=5
