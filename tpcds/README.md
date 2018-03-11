@@ -54,16 +54,13 @@ done
 
 ## 5. Query generation
 
-Query generation is done via `dsqgen` with query templetes, here we use a pre-written shell script file "tools/genquery.sh":
+Query generation is done via `dsqgen` with query templetes, here we use a pre-written shell script file [genquery.sh](./genquery.sh), after running this script, queries are located in directory "queries":
 ```sh
-cd tools
-mkdir queries
 ./genquery.sh
-cd -
 ```
 
 All supported TPC-DS queries for TiDB are generated in `tools/queries`
 
 ## 6. For lazy/advanced users
 
-`load_data.sh` can be used to complete step 1~4, look into that file for more details.
+[load_data.sh](./load_data.sh) can be used to complete step 1~4, look into that file for more details.
