@@ -11,8 +11,8 @@
      `mysqladmin create tpcc1000`
    * create tables
      `mysql tpcc1000 < create_table.sql`
-   * create indexes (this step can be done after loading data), no foreign keys here.
-     `mysql tpcc1000 < add_idx.sql`
+   * create indexes and FK (this step can be done after loading data), no foreign keys here.
+     `mysql tpcc1000 < add_fkey_idx.sql`
    * populate data
      - simple step
        `./tpcc_load -h127.0.0.1 -P4000 -d tpcc1000 -u root -p "" -w 1000`
@@ -22,7 +22,7 @@
        check load.sh script
 
 3. Start benchmark
-   * TiDB uses OCC transaction model, `SELECT FOR UPDATE` won't add locks on tuples, so we remove them in tpcc test.
+   * Due to the standard SI MVCC implement of TiDB, there is no need to use `SELECT FOR UPDATE` to avoid LOST UPDATE as MySQL does, so we remove them in tpcc test.
    * `./tpcc_start -h127.0.0.1 -P4000 -d tpcc1000 -uroot -p "" -w1000 -c32 -r10 -l10800`
    * |hostname| |port| |dbname| |user| |password| |WAREHOUSES| |CONNECTIONS| |WARMUP TIME| |BENCHMARK TIME|
    * ref. tpcc_start --help for all options 
