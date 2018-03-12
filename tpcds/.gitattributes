@@ -1,0 +1,5 @@
+*.sql linguist-language=SQL
+*.tpl linguist-language=SQL
+*.ans linguist-language=Text
+answer_sets/* linguist-vendored
+tools/* linguist-vendored=false
