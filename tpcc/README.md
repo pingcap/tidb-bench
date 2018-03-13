@@ -11,7 +11,7 @@
      `mysqladmin create tpcc1000`
    * create tables
      `mysql tpcc1000 < create_table.sql`
-   * create indexes and FK (this step can be done after loading data), no foreign keys here.
+   * create indexes and FK (this step can be done after loading data)
      `mysql tpcc1000 < add_fkey_idx.sql`
    * populate data
      - simple step
