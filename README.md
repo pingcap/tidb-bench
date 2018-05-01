@@ -7,7 +7,8 @@ TiDB standard test suite.
   - [sql-bench](./sql-bench)
   - [sysbench](./sysbench)
   - [TPC-C](./tpcc)
-  
+
 - OLAP Benchmark
   - [TPC-DS](./tpcds)
   - [TPC-H](./tpch)
+  - [Star Schema Benchmark](./ssb)
