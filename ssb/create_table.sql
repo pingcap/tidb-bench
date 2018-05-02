@@ -35,7 +35,7 @@ create table customer(
 );
 
 create table date(
-    d_datekey date,
+    d_datekey bigint,
     d_date char(20),
     d_dayofweek char(10),
     d_month char(10),
@@ -60,7 +60,7 @@ create table lineorder (
     lo_custkey bigint,
     lo_partkey bigint,
     lo_suppkey bigint,
-    lo_orderdate date,
+    lo_orderdate bigint,
     lo_orderpriority char(20),
     wlo_shippriority char(1),
     lo_quantity bigint,
@@ -70,7 +70,12 @@ create table lineorder (
     lo_revenue bigint,
     lo_supplycost bigint,
     lo_tax bigint,
-    lo_commitdate date,
+    lo_commitdate bigint,
     lo_shipmode char(10),
-    primary key(lo_orderkey, lo_linenumber)
+    primary key(lo_orderkey, lo_linenumber),
+    constraint foreign key lineorder_fk1(lo_custkey) references customer(c_custkey),
+    constraint foreign key lineorder_fk2(lo_partkey) references part(p_partkey),
+    constraint foreign key lineorder_fk3(lo_suppkey) references supplier(s_suppkey),
+    constraint foreign key lineorder_fk4(lo_orderdate) references date(d_datekey),
+    constraint foreign key lineorder_fk5(lo_commitdate) references date(d_datekey)
 );
