@@ -2,9 +2,8 @@
 
 ## Introduction
 
-[dbgen](./dbgen) comes from [electrum/ssb-dbgen](https://github.com/electrum/ssb-dbgen), thanks to [electrum](https://github.com/electrum)
-
-[Star Schema Benchmark](https://www.cs.umb.edu/~poneil/StarSchemaB.PDF)
+- [dbgen](./dbgen) comes from [electrum/ssb-dbgen](https://github.com/electrum/ssb-dbgen), thanks to [electrum](https://github.com/electrum)
+- What is SSB: [Star Schema Benchmark](https://www.cs.umb.edu/~poneil/StarSchemaB.PDF)
 
 ## Build
 
@@ -14,7 +13,7 @@ make -j8
 cd ..
 ```
 
-## Data generation
+## Data Generation
 
 ```sh
 cd dbgen
@@ -28,17 +27,17 @@ cd ..
 ```sh
 mysql -h 127.0.0.1 -P 4000 -u root -e "drop database if exists ssb;"
 mysql -h 127.0.0.1 -P 4000 -u root -e "create database ssb;"
-mysql -h 127.0.0.1 -P 4000 -u root -D ssb < ddl.sql
+mysql -h 127.0.0.1 -P 4000 -u root -D ssb < create_table.sql
 ```
 
 ## Load Data
 
 ```sh
-mysql -u 127.0.0.1 -P 4000 -u root -D ssb -e "load data local infile 'SSB/part.tbl'      into table part      fields terminated by '|' lines terminated by '\n';"
-mysql -u 127.0.0.1 -P 4000 -u root -D ssb -e "load data local infile 'SSB/supplier.tbl'  into table supplier  fields terminated by '|' lines terminated by '\n';"
-mysql -u 127.0.0.1 -P 4000 -u root -D ssb -e "load data local infile 'SSB/customer.tbl'  into table customer  fields terminated by '|' lines terminated by '\n';"
-mysql -u 127.0.0.1 -P 4000 -u root -D ssb -e "load data local infile 'SSB/date.tbl'      into table date      fields terminated by '|' lines terminated by '\n';"
-mysql -u 127.0.0.1 -P 4000 -u root -D ssb -e "load data local infile 'SSB/lineorder.tbl' into table lineorder fields terminated by '|' lines terminated by '\n';"
+mysql --local-infile=1 -h 127.0.0.1 -P 4000 -u root -D ssb -e "load data local infile 'dbgen/part.tbl'      into table part      fields terminated by '|' lines terminated by '\n';"
+mysql --local-infile=1 -h 127.0.0.1 -P 4000 -u root -D ssb -e "load data local infile 'dbgen/supplier.tbl'  into table supplier  fields terminated by '|' lines terminated by '\n';"
+mysql --local-infile=1 -h 127.0.0.1 -P 4000 -u root -D ssb -e "load data local infile 'dbgen/customer.tbl'  into table customer  fields terminated by '|' lines terminated by '\n';"
+mysql --local-infile=1 -h 127.0.0.1 -P 4000 -u root -D ssb -e "load data local infile 'dbgen/date.tbl'      into table date      fields terminated by '|' lines terminated by '\n';"
+mysql --local-infile=1 -h 127.0.0.1 -P 4000 -u root -D ssb -e "load data local infile 'dbgen/lineorder.tbl' into table lineorder fields terminated by '|' lines terminated by '\n';"
 ```
 
 ## Run Queries
