@@ -62,7 +62,7 @@ create table lineorder (
     lo_suppkey bigint,
     lo_orderdate bigint,
     lo_orderpriority char(20),
-    wlo_shippriority char(1),
+    lo_shippriority char(1),
     lo_quantity bigint,
     lo_extendedprice bigint,
     lo_ordtotalprice bigint,
