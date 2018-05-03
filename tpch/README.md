@@ -1,5 +1,5 @@
-TPC-H Benchmark, specific for MYSQL
-## Introductiob
+TPC-H Benchmark, specific for MySQL/TiDB
+## Introduction
 file structure
   - alltable.load
 	mysql commands to load all data
@@ -21,7 +21,7 @@ them work with TiDB.
 
 ## How to use 
 
-Use mysql client log intto `TiDB` and create a databse call `tpch`.
+Use mysql client login to `TiDB` and create a databse call `tpch`.
 `make tbl` will make `dbgen` and generate `*.tbl` files.
 
 `make load` will create database and tables in TiDB and load all `*.tbl` into TiDB.
