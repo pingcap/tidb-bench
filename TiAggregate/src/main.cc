@@ -1,25 +1,30 @@
-#include "column.h"
 #include "table.h"
-#include <iostream>
 
-const static size_t sNumRows = 1000000;
+#include <string>
+#include <unordered_map>
+
+const static size_t sNumRows = 1 << 20;
 
 int main() {
     size_t sf = 1;
-
-    // generate table with only one key firstly.
     abm::Table table(sNumRows*sf, 1);
-    table.Populate();
-    table.DumpToCSV("tab1.tbl");
 
-    std::string fileNames[] = {"tab10.tbl", "tab20.tbl", "tab30.tbl", "tab40.tbl", "tab50.tbl", "tab60.tbl", "tab70.tbl", "tab80.tbl", "tab90.tbl", "tab100.tbl"};
     // generate table with "ndv" keys.
-    for (int i = 0; i < 10; ++i) {
-        double ndvRatio = (double (i+1))/(10);
-        size_t ndv = ndvRatio*(sNumRows*sf);
-        table.Reset(ndv);
+    // table_csv_file_name -> table_key_ndv
+    std::unordered_map<std::string, int64_t> restTables({
+        {"t0.tbl",   1 << 0},
+        {"t2.tbl",   1 << 2},
+        {"t4.tbl",   1 << 4},
+        {"t6.tbl",   1 << 6},
+        {"t8.tbl",   1 << 8},
+        {"t10.tbl",  1 << 10},
+        {"t12.tbl",  1 << 12},
+        {"full.tbl", sNumRows*sf},
+    });
+    for (auto it = restTables.begin(); it != restTables.end(); ++it) {
+        table.Reset(it->second);
         table.Populate();
-        table.DumpToCSV(fileNames[i]);
+        table.DumpToCSV(it->first);
     }
     return 0;
 }
