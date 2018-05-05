@@ -1,6 +1,8 @@
 #ifndef _ABM_COLUMN_H_
 #define _ABM_COLUMN_H_
 
+#include <stdint.h>
+#include <stddef.h>
 #include <assert.h>
 
 namespace abm {

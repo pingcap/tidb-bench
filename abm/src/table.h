@@ -3,9 +3,10 @@
 
 #include "column.h"
 
+#include <stddef.h>
+#include <stdio.h>
 #include <unordered_map>
 #include <string>
-#include <stdio.h>
 
 namespace abm {
 
