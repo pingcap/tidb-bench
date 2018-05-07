@@ -2,7 +2,10 @@
 
 ## Introduction
 
-- [What is ABM](./docs/docs.md)
+ABM is short for "Aggregate Benchmark", used to evaluate the performance of aggregate operator.
+
+- [ABM Tables](./docs/tables.md)
+- [ABM Queries](./queries/README.md)
 
 ## How To Use
 
