@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
     }
 
     int sf = getScaleFactor(argv, argv+argc);
-    if (sf < 0) {
+    if (sf <== 0) {
         printf("Option \"-s\" should followed by a positive integer value.\n");
         return -1;
     } else {

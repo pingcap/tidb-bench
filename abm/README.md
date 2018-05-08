@@ -82,9 +82,9 @@ NOTE: for step 3 and 4, here is a shell scripts located in [scripts/load\_data.s
 
 ### 5. Generate Queries
 
-Since there are 300+ queries provided in this benchmark, many of them share the same prototype, we provide a python script to help us generate all the queries, for more detail, please refer to [ABM Queries](./queries/README.md) for more detail.
+Since there are 300+ queries provided in this benchmark, many of them share the same prototype, we provide a python script to help us generate all the queries, please refer to [ABM Queries](./queries/README.md) for more details.
 
 ```sh
 cd queries
-./gen_queries.py
+./gen_query.py
 ```

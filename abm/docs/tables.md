@@ -1,6 +1,6 @@
 # ABM Tables
 
-This is an introduction for tables inside the Aggregate Benchmark(ABM).
+This is an introduction to tables inside the Aggregate Benchmark(ABM).
 
 ## Common Schemas
 
