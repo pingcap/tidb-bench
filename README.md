@@ -12,3 +12,4 @@ TiDB standard test suite.
   - [TPC-DS](./tpcds)
   - [TPC-H](./tpch)
   - [Star Schema Benchmark](./ssb)
+  - [Aggregate Benchmark](./abm)
