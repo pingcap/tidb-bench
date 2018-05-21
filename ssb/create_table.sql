@@ -16,7 +16,7 @@ create table supplier(
     s_name char(30),
     s_address varchar(30),
     s_city char(20),
-    s_natios_nationn char(20),
+    s_nationn char(20),
     s_region char(20),
     s_phone char(20),
     primary key(s_suppkey)
@@ -28,7 +28,7 @@ create table customer(
     c_address varchar(30),
     c_city char(20),
     c_nation char(20),
-    c_regioc_regionn char(20),
+    c_regionn char(20),
     c_phone char(20),
     c_mktsegment char(20),
     primary key(c_custkey)
