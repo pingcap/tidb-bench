@@ -3,7 +3,7 @@
 set -x
 
 . ./conf.sh
-((pnum=${tcount}*2))
+((pnum=${tcount}*1))
 
 if [[ ${password} = "" ]];
 then

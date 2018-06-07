@@ -24,7 +24,7 @@ function create_parallel_insert(table_id)
    end
 
    i = table_id
-   thread_patch=oltp_table_size/2
+   thread_patch=oltp_table_size/1
 
    log_info("Inserting " .. thread_patch .. " records into 'sbtest" .. i .. "'")
 
