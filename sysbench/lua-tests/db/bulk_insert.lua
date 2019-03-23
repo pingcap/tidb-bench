@@ -12,8 +12,8 @@ function prepare()
    for i = 0,num_threads-1 do
       db_query([[
 CREATE TABLE IF NOT EXISTS sbtest]] .. i .. [[ (
-id INTEGER UNSIGNED NOT NULL,
-k INTEGER UNSIGNED DEFAULT '0' NOT NULL,
+id BIGINT UNSIGNED NOT NULL,
+k BIGINT UNSIGNED DEFAULT '0' NOT NULL,
 PRIMARY KEY (id)
 ) ENGINE = InnoDB
 ]])

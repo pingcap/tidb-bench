@@ -24,9 +24,9 @@ function create_insert(table_id)
    if ((db_driver == "mysql") or (db_driver == "attachsql")) then
       query = [[
 CREATE TABLE IF NOT EXISTS sbtest]] .. i .. [[ (
-id INTEGER UNSIGNED NOT NULL ]] ..
+id BIGINT UNSIGNED NOT NULL ]] ..
 ((oltp_auto_inc and "AUTO_INCREMENT") or "") .. [[,
-k INTEGER UNSIGNED DEFAULT '0' NOT NULL,
+k BIGINT UNSIGNED DEFAULT '0' NOT NULL,
 c CHAR(120) DEFAULT '' NOT NULL,
 pad CHAR(60) DEFAULT '' NOT NULL,
 ]] .. index_name .. [[ (id)
@@ -38,7 +38,7 @@ pad CHAR(60) DEFAULT '' NOT NULL,
       query = [[
 CREATE TABLE IF NOT EXISTS sbtest]] .. i .. [[ (
 id SERIAL NOT NULL,
-k INTEGER DEFAULT '0' NOT NULL,
+k bigint DEFAULT '0' NOT NULL,
 c CHAR(120) DEFAULT '' NOT NULL,
 pad CHAR(60) DEFAULT '' NOT NULL,
 ]] .. index_name .. [[ (id)
@@ -47,8 +47,8 @@ pad CHAR(60) DEFAULT '' NOT NULL,
    elseif (db_driver == "drizzle") then
       query = [[
 CREATE TABLE IF NOT EXISTS sbtest (
-id INTEGER NOT NULL ]] .. ((oltp_auto_inc and "AUTO_INCREMENT") or "") .. [[,
-k INTEGER DEFAULT '0' NOT NULL,
+id BIGINT NOT NULL ]] .. ((oltp_auto_inc and "AUTO_INCREMENT") or "") .. [[,
+k BIGINT DEFAULT '0' NOT NULL,
 c CHAR(120) DEFAULT '' NOT NULL,
 pad CHAR(60) DEFAULT '' NOT NULL,
 ]] .. index_name .. [[ (id)
@@ -89,7 +89,7 @@ pad CHAR(60) DEFAULT '' NOT NULL,
    end
 
    db_bulk_insert_done()
-   
+
 end
 
 
