@@ -38,7 +38,7 @@ pad CHAR(60) DEFAULT '' NOT NULL,
       query = [[
 CREATE TABLE IF NOT EXISTS sbtest]] .. i .. [[ (
 id SERIAL NOT NULL,
-k bigint DEFAULT '0' NOT NULL,
+k BIGINT DEFAULT '0' NOT NULL,
 c CHAR(120) DEFAULT '' NOT NULL,
 pad CHAR(60) DEFAULT '' NOT NULL,
 ]] .. index_name .. [[ (id)
