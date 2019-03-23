@@ -17,8 +17,8 @@ function prepare()
    if ((db_driver == "mysql") or (db_driver == "attachsql")) then
       query = [[
         CREATE TABLE sbtest (
-          id INTEGER UNSIGNED NOT NULL ]] .. ((oltp_auto_inc and "AUTO_INCREMENT") or "") .. [[,
-          k INTEGER UNSIGNED DEFAULT '0' NOT NULL,
+          id BIGINT UNSIGNED NOT NULL ]] .. ((oltp_auto_inc and "AUTO_INCREMENT") or "") .. [[,
+          k BIGINT UNSIGNED DEFAULT '0' NOT NULL,
           c CHAR(120) DEFAULT '' NOT NULL,
           pad CHAR(60) DEFAULT '' NOT NULL,
           PRIMARY KEY (id)
@@ -27,29 +27,29 @@ function prepare()
    elseif (db_driver == "oracle") then
       query = [[
         CREATE TABLE sbtest (
-          id INTEGER NOT NULL,
-          k INTEGER,
+          id BIGINT NOT NULL,
+          k BIGINT,
           c CHAR(120) DEFAULT '' NOT NULL,
           pad CHAR(60 DEFAULT '' NOT NULL,
           PRIMARY KEY (id)
        ) ]]
-    
+
 
    elseif (db_driver == "pgsql") then
       query = [[
         CREATE TABLE sbtest (
           id ]] .. (sb.oltp_auto_inc and "SERIAL") or "" .. [[,
-          k INTEGER DEFAULT '0' NOT NULL,
+          k BIGINT DEFAULT '0' NOT NULL,
           c CHAR(120) DEFAULT '' NOT NULL,
-          pad CHAR(60) DEFAULT '' NOT NULL, 
+          pad CHAR(60) DEFAULT '' NOT NULL,
           PRIMARY KEY (id)
         ) ]]
 
    elseif (db_driver == "drizzle") then
       query = [[
         CREATE TABLE sbtest (
-          id INTEGER NOT NULL ]] .. ((oltp_auto_inc and "AUTO_INCREMENT") or "") .. [[,
-          k INTEGER DEFAULT '0' NOT NULL,
+          id BIGINT NOT NULL ]] .. ((oltp_auto_inc and "AUTO_INCREMENT") or "") .. [[,
+          k BIGINT DEFAULT '0' NOT NULL,
           c CHAR(120) DEFAULT '' NOT NULL,
           pad CHAR(60) DEFAULT '' NOT NULL,
           PRIMARY KEY (id)
@@ -64,14 +64,14 @@ function prepare()
 
    if (db_driver == "oracle") then
       db_query("CREATE SEQUENCE sbtest_seq")
-      db_query([[CREATE TRIGGER sbtest_trig BEFORE INSERT ON sbtest 
+      db_query([[CREATE TRIGGER sbtest_trig BEFORE INSERT ON sbtest
                  FOR EACH ROW BEGIN SELECT sbtest_seq.nextval INTO :new.id FROM DUAL; END;]])
    end
 
    db_query("CREATE INDEX k on sbtest(k)")
 
    print("Inserting " .. oltp_table_size .. " records into 'sbtest'")
-   
+
    if (oltp_auto_inc) then
       db_bulk_insert_init("INSERT INTO sbtest(k, c, pad) VALUES")
    else
@@ -103,10 +103,10 @@ function thread_init(thread_id)
    for i = 1,random_points do
       points = points .. "?, "
    end
-   
+
    -- Get rid of last comma and space.
    points = string.sub(points, 1, string.len(points) - 2)
-   
+
    stmt = db_prepare([[
         SELECT id, k, c, pad
           FROM sbtest
