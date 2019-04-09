@@ -5,7 +5,7 @@ TiDB standard test suite.
 ## Supports
 - OLTP Benchmark
   - [sql-bench](./sql-bench)
-  - [sysbench(https://github.com/akopytov/sysbench)
+  - [sysbench](./sysbench-patch)
   - [TPC-C](./tpcc)
 
 - OLAP Benchmark
