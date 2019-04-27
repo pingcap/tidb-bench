@@ -1,0 +1,7 @@
+time=300
+db-driver=mysql
+mysql-host=127.0.0.1
+mysql-port=4000
+mysql-user=root
+mysql-db=sbtest
+report-interval=10
