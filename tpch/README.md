@@ -34,7 +34,8 @@ Use the `load.sh` at the root directory to load data. Command `bash load.sh line
 
 ### Analyze Table and load stats into memory
 
-Use `analyze.sh` to analyze all the tables.
+Use `analyze.sh` to analyze all the tables. You can set `tidb_build_stats_concurrency` to a large value before analyzing tables.
+
 And since the statistics of columns are loaded by need. We need to load them first before the running the benchmark. You can run the sql in `load_stats.sql` to do this.
 
 ***NOTE*** that if you're loading to MySQL, you don't need to run sql in the `load_stats.sql`.
