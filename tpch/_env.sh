@@ -1,3 +1,3 @@
-tidb_port=4000
-tidb_host="127.0.0.1"
+tidb_port=4010
+tidb_host="172.16.4.70"
 tpch_scale=50

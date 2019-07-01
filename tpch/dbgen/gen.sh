@@ -6,6 +6,8 @@ blocks="$2"
 set -eux
 set -o pipefail
 
+source ../_env.sh
+
 map_lineitem="L"
 map_orders="O"
 map_customer="c"
@@ -32,4 +34,5 @@ else
         for ((i=1; i<$blocks+1; ++i)); do
                 ./dbgen -s $tpch_scale -T ${!table_arg} -C $blocks -S $i &
         done
+	wait
 fi
