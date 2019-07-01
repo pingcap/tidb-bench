@@ -1,4 +1,4 @@
-TPC-H Benchmark, specific for TiDB only
+TPC-H Benchmark, specific for MySQL/TiDB
 ## Introduction
 
 This is ported from https://github.com/xinglin/tpch. But do a lot change to make it work easier when the scale factor fo TPC-H is large.
@@ -14,7 +14,7 @@ It contains the TiDB ip, port info. Also the TPC-H scale factor is included.
 
 `cd dbgen && make`
 
-If you are using macOs, please replace `#include<malloc.h>` in `varsub.c` and `bm_utils.c` to `#include<stdlib.c>`.
+If you are using macOS, please replace `#include<malloc.h>` in `varsub.c` and `bm_utils.c` to `#include<stdlib.c>`.
 
 ### Generate dataset
 
@@ -28,14 +28,24 @@ lineitem.tbl.10  lineitem.tbl.12  lineitem.tbl.14  lineitem.tbl.16  lineitem.tbl
 
 You can put them to a seperate directory like `data/tpch${tpch_scale}` if you want to test multiple TPC-H workload.
 
-### Load data to TiDB
+### Load data
 
 Use the `load.sh` at the root directory to load data. Command `bash load.sh lineitem 16` means load data of lineitem which is separated into 16 files into TIDB
 
 ### Analyze Table and load stats into memory
 
-Run analyze command to analyze all the tables.
+Use `analyze.sh` to analyze all the tables.
 And since the statistics of columns are loaded by need. We need to load them first before the running the benchmark. You can run the sql in `load_stats.sql` to do this.
+
+***NOTE*** that if you're loading to MySQL, you don't need to run sql in the `load_stats.sql`.
+
+### Set the system variables.
+
+You can view at our docs repo to see the full description of TiDB's system variables.
+
+For testing, you can simply use `show variables like '%tidb%concurrency%'` to get the variables related with execution. You set these variables to the the number of you CPU cores.
+
+***NOTE*** If you're using MySQL, you can skip this procedure.
 
 ### Run the benchmark
 
