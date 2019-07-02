@@ -40,6 +40,8 @@ And since the statistics of columns are loaded by need. We need to load them fir
 
 ***NOTE*** that if you're loading to MySQL, you don't need to run sql in the `load_stats.sql`.
 
+Also ***NOTE*** that if the TiDB server is restarted. You need to run the `load_stats.sql` again before you run the benchmark.
+
 ### Set the system variables.
 
 You can view at our docs repo to see the full description of TiDB's system variables.
