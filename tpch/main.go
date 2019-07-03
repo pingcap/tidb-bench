@@ -15,6 +15,7 @@ func main() {
 	tidbAddrFlag := flag.String("addr", "127.0.0.1", "TiDB's address")
 	tidbPortFlag := flag.Int("port", 4000, "TiDB's listening port")
 	tpchScaleFlag := flag.Int("scale", 10, "The scale factor of current TPC-H dataset")
+	tpchCountFlag := flag.Int("count", 3, "The count times factor of bench")
 	queryDirFlag := flag.String("dir", "./queries", "The directory where the query SQLs are")
 
 	flag.Parse()
@@ -27,7 +28,7 @@ func main() {
 		f := filepath.Join(*queryDirFlag, file.Name())
 		fmt.Printf("%v\n", f)
 		totCost := time.Duration(0)
-		for i := 0; i < 3; i++ {
+		for i := 0; i < *tpchCountFlag; i++ {
 			cur := time.Now()
 			var stderr bytes.Buffer
 			cmd := exec.Command("mysql",
@@ -46,8 +47,8 @@ func main() {
 			}
 			dur := time.Since(cur)
 			totCost += dur
-			fmt.Printf("%v's %vth run finished\n", file.Name(), i)
+			fmt.Printf("%v's %vth run finished in %v\n", file.Name(), i, dur)
 		}
-		fmt.Printf("%v costs: %v\n", file.Name(), totCost/3)
+		fmt.Printf("%v costs: %v\n", file.Name(), totCost/*tpchCountFlag)
 	}
 }
