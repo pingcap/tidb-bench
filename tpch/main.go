@@ -49,6 +49,6 @@ func main() {
 			totCost += dur
 			fmt.Printf("%v's %vth run finished in %v\n", file.Name(), i, dur)
 		}
-		fmt.Printf("%v costs: %v\n", file.Name(), totCost/3)
+		fmt.Printf("%v costs: %v\n", file.Name(), totCost/*tpchCountFlag)
 	}
 }
