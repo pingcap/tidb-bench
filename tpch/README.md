@@ -18,7 +18,7 @@ If you are using macOS, please replace `#include<malloc.h>` in `varsub.c` and `b
 
 ### Generate dataset
 
-You can use the `gen.sh` in `dbgen` directory. The command `bash gen.sh lineitem 16` means that generate the data for table lineitem and split the data to 16 files. After finished, you can use `ls lineitem*` to see the generated files:
+You can use the `gen.sh` in `dbgen` directory. The command `./gen.sh lineitem 16` means that generate the data for table `lineitem` and split the data into 16 files. After finished, you can use `ls lineitem*` to see the generated files:
 
 ```
 ls lineitem*
@@ -36,7 +36,9 @@ Use the `load.sh` at the root directory to load data. Command `bash load.sh line
 
 Use `analyze.sh` to analyze all the tables. You can set `tidb_build_stats_concurrency` to a large value before analyzing tables.
 
-And since the statistics of columns are loaded by need. We need to load them first before the running the benchmark. You can run the sql in `load_stats.sql` to do this.
+The column statistics of tables are cached by need in the TiDB server. In order to get a better execution plan and query latency, it's recommended to run the SQL in `load_stats.sql`  to load the needed column statistics into the TiDB server before running the TPC-H benchmark.
+
+After executing the SQL, please wait for `x * stats-lease / analyze-concurrency` seconds to let TiDB finish loading column statistics into the memory.
 
 ***NOTE*** that if you're loading to MySQL, you don't need to run sql in the `load_stats.sql`.
 
