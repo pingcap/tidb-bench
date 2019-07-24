@@ -3,10 +3,10 @@
 TiDB standard test suite.
 
 ## Supports
+
 - OLTP Benchmark
   - [sql-bench](./sql-bench)
   - [sysbench](./sysbench-patch)
-  - [TPC-C](./tpcc)
 
 - OLAP Benchmark
   - [TPC-DS](./tpcds)
