@@ -1,3 +1,3 @@
-A patch to sysbench to make data loading faster for TiDB.
+A patch to Sysbench to make data load faster for TiDB.
 
 Tested with sysbench version 1.0
