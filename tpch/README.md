@@ -32,6 +32,13 @@ You can put them to a seperate directory like `data/tpch${tpch_scale}` if you wa
 
 Use the `load.sh` at the root directory to load data. Command `bash load.sh lineitem 16` means load data of lineitem which is separated into 16 files into TIDB
 
+### Modify the config of TiKV
+
+TPC-H is a readonly TP benchmark. Where you don't need to consider the writing operations. Hence, you can set the block cache and the coprocessor's concurrency a little bigger.
+
+For copcessor's concurrency, you can directly set it to the CPU_NUM*0.8. And for block-cache size, you can set it to half of the total memory or larger.
+
+
 ### Analyze Table and load stats into memory
 
 Use `analyze.sh` to analyze all the tables. You can set `tidb_build_stats_concurrency` to a large value before analyzing tables.
