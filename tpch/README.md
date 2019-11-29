@@ -1,33 +1,64 @@
 TPC-H Benchmark, specific for MySQL/TiDB
 ## Introduction
-file structure
-  - alltable.load
-	mysql commands to load all data
-  - alltable.count
-	mysql commands to select count(*) all tables
-  - dss.sql
- 	modified schema definition file
-  - get-all-query-time.pl
- 	perl script to get runtime of each query
-  - get-query-time.pl
- 	perl script to get runtime of a query
-  - queries
-	22 TPC-H queries
-  - tablescanquery.pl
-	perl script to generate scan query for all tables
 
-Some changes have been made to official files provided by TPC-H, to make
-them work with TiDB.
+This is ported from https://github.com/xinglin/tpch. But do a lot change to make it work easier when the scale factor fo TPC-H is large.
+Also made some changes to make it work better with TiDB.
 
 ## How to use 
 
-Use mysql client login to `TiDB` and create a databse call `tpch`.
-`make tbl` will make `dbgen` and generate `*.tbl` files.
+### Edit the `_env.sh`
 
-`make load` will create database and tables in TiDB and load all `*.tbl` into TiDB.
+It contains the TiDB ip, port info. Also the TPC-H scale factor is included.
 
-After this, please be patient. If you really want to know any progress that `TiDB` is
-making right now, you can open another terminal and use query defined in `alltable.count`
-to know how many rows in the table.
+### Build `dbgen` tool
 
-If you are using macOs, please replace `#include<malloc.h>` in `varsub.c` and `bm_utils.c` to `#include<stdlib.c>`.
+`cd dbgen && make`
+
+If you are using macOS, please replace `#include<malloc.h>` in `varsub.c` and `bm_utils.c` to `#include<stdlib.c>`.
+
+### Generate dataset
+
+You can use the `gen.sh` in `dbgen` directory. The command `./gen.sh lineitem 16` means that generate the data for table `lineitem` and split the data into 16 files. After finished, you can use `ls lineitem*` to see the generated files:
+
+```
+ls lineitem*
+lineitem.tbl.1   lineitem.tbl.11  lineitem.tbl.13  lineitem.tbl.15  lineitem.tbl.2  lineitem.tbl.4  lineitem.tbl.6  lineitem.tbl.8
+lineitem.tbl.10  lineitem.tbl.12  lineitem.tbl.14  lineitem.tbl.16  lineitem.tbl.3  lineitem.tbl.5  lineitem.tbl.7  lineitem.tbl.9
+```
+
+You can put them to a seperate directory like `data/tpch${tpch_scale}` if you want to test multiple TPC-H workload.
+
+### Load data
+
+Use the `load.sh` at the root directory to load data. Command `bash load.sh lineitem 16` means load data of lineitem which is separated into 16 files into TIDB
+
+### Modify the config of TiKV
+
+TPC-H is a readonly TP benchmark. Where you don't need to consider the writing operations. Hence, you can set the block cache and the coprocessor's concurrency a little bigger.
+
+For copcessor's concurrency, you can directly set it to the CPU_NUM*0.8. And for block-cache size, you can set it to half of the total memory or larger.
+
+
+### Analyze Table and load stats into memory
+
+Use `analyze.sh` to analyze all the tables. You can set `tidb_build_stats_concurrency` to a large value before analyzing tables.
+
+The column statistics of tables are cached by need in the TiDB server. In order to get a better execution plan and query latency, it's recommended to run the SQL in `load_stats.sql`  to load the needed column statistics into the TiDB server before running the TPC-H benchmark.
+
+After executing the SQL, please wait for `x * stats-lease / analyze-concurrency` seconds to let TiDB finish loading column statistics into the memory.
+
+***NOTE*** that if you're loading to MySQL, you don't need to run sql in the `load_stats.sql`.
+
+Also ***NOTE*** that if the TiDB server is restarted. You need to run the `load_stats.sql` again before you run the benchmark.
+
+### Set the system variables.
+
+You can view at our docs repo to see the full description of TiDB's system variables.
+
+For testing, you can simply use `show variables like '%tidb%concurrency%'` to get the variables related with execution. You set these variables to the the number of you CPU cores.
+
+***NOTE*** If you're using MySQL, you can skip this procedure.
+
+### Run the benchmark
+
+`go build` and then `./tpch -addr="..." -port=... -scale=...` to get the benchmark result. It runs each sql 3 times and use the average as the result.
