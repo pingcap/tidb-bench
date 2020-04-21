@@ -31,3 +31,12 @@ making right now, you can open another terminal and use query defined in `alltab
 to know how many rows in the table.
 
 If you are using macOs, please replace `#include<malloc.h>` in `varsub.c` and `bm_utils.c` to `#include<stdlib.c>`.
+
+## How to use in Tiflash, using tidb-lighting to fast load data
+
+step 1: `make dbgen`: make executable file of dbgen
+
+step 2: `sh gen_load_tiflash.sh 1 ./dss_tiflash.sql` generate data of a specific scale factor and create a database and create schema. The first parameter means the scale factor, and the second is the ddl sql. **You MUST set the right scale factor of data, and the database IP and Port in gen_load_tiflash.sh.** 
+
+step3: update `data-source-dir ` in `tidb-lightning.toml`, use it and `tikv-importer.toml` to fast load data. Update the IP and Port of these two files.
+  
