@@ -1,0 +1,22 @@
+# TiKV Importer 配置文件模版
+
+# 日志文件。
+log-file = "tikv-importer.log"
+# 日志等级：trace、debug、info、warn、error、off。
+log-level = "info"
+
+[server]
+# tikv-importer 监听的地址，tidb-lightning 需要连到这个地址进行数据写入。
+addr = "172.16.5.69:8287"
+
+[metric]
+# 给 Prometheus 客户端的推送任务名称。
+#job = "tikv-importer"
+# 给 Prometheus 客户端的推送间隔。
+#interval = "15s"
+# Prometheus Pushgateway 地址。
+#address = ""
+
+[import]
+# 存储引擎文档 (engine file) 的文件夹路径。
+import-dir = "/data1/fzh/data.import/"
