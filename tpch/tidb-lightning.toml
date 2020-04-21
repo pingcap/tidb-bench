@@ -1,0 +1,71 @@
+[lightning]
+
+# 转换数据的并发数，默认为逻辑 CPU 数量，不需要配置。
+# 混合部署的情况下可以配置为逻辑 CPU 的 75% 大小。
+region-concurrency = 32
+# 日志
+level = "info"
+file = "tidb-lightning.log"
+index-concurrency = 2
+io-concurrency = 5
+max-backups = 14
+max-days = 28
+max-size = 128
+pprof-port = 8289
+table-concurrency = 6
+
+[checkpoint]
+enable = true
+schema = "tidb_lightning_checkpoint"
+
+[tikv-importer]
+# tikv-importer 的监听地址，需改成 tikv-importer 服务器的实际地址。
+addr = "172.16.5.71:8287"
+
+[mydumper]
+# Mydumper 源数据目录。
+data-source-dir = "/data1/fzh/tidb-bench/tpch/sf100"
+no-schema = true
+read-block-size = 65536
+strict-format = true
+
+[mydumper.csv]
+# 字段分隔符，必须为 ASCII 字符。
+separator = '|'
+# 引用定界符，可以为 ASCII 字符或空字符。
+delimiter = ''
+# CSV 文件是否包含表头。
+# 如果为 true，首行将会被跳过。
+header = false
+# CSV 是否包含 NULL。
+# 如果为 true，CSV 文件的任何列都不能解析为 NULL。
+not-null = true
+# 如果 `not-null` 为 false（即 CSV 可以包含 NULL），
+# 为以下值的字段将会被解析为 NULL。
+null = '\N'
+# 是否解析字段内的反斜线转义符。
+backslash-escape = false
+# 是否移除以分隔符结束的行。
+trim-last-separator = true
+
+[tidb]
+# 目标集群的信息。tidb-server 的监听地址，填一个即可。
+build-stats-concurrency = 40
+checksum-table-concurrency = 16
+distsql-scan-concurrency = 100
+index-serial-scan-concurrency = 40
+host = "172.16.5.69"
+port = 4000
+user = "root"
+password = ""
+# 表架构信息在从 TiDB 的“状态端口”获取。
+status-port = 10080
+
+[post-restore]
+analyze = true
+checksum = true
+
+[cron]
+log-progress = "5m"
+switch-mode = "5m"
+

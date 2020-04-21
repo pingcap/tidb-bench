@@ -2,6 +2,8 @@
 *.o
 *.a
 *.so
+*.tbl
+*.log
 
 # Folders
 _obj
@@ -24,3 +26,5 @@ _testmain.go
 *.prof
 
 *.swp
+
+tpch/dbgen/*
