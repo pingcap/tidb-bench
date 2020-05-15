@@ -1,0 +1,10 @@
+all_rnd_write
+2
+block_size
+64k
+threads  4
+num      100000000
+value_size 64
+write_buffer_size 64m
+cache_size 4g
+max_bytes_for_level_multiplier 2
