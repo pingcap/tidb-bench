@@ -46,7 +46,7 @@ where
 i_manufact_id = [IMID]
 and i_item_sk = cs_item_sk
 and d_date between '[CSDATE]' and
-        (cast('[CSDATE]' as date) + 90 days)
+        date_add(cast('[CSDATE]' as date), interval 90 day)
 and d_date_sk = cs_sold_date_sk
 and cs_ext_discount_amt
      > (
@@ -58,7 +58,7 @@ and cs_ext_discount_amt
          where
               cs_item_sk = i_item_sk
           and d_date between '[CSDATE]' and
-                             (cast('[CSDATE]' as date) + 90 days)
+                             date_add(cast('[CSDATE]' as date), interval 90 day)
           and d_date_sk = cs_sold_date_sk
       )
 [_LIMITC];

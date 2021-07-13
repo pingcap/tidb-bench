@@ -84,7 +84,7 @@
  group by c_customer_sk
  )
  , segments as
- (select cast((revenue/50) as int) as segment
+ (select cast((revenue/50) as signed) as segment
   from   my_revenue
  )
  [_LIMITA] select [_LIMITB] segment, count(*) as num_customers, segment*50 as segment_base

@@ -9,6 +9,8 @@ This tpcds-kit is ported from [gregrahn/tpcds-kit](https://github.com/gregrahn/t
   * https://github.com/gregrahn/tpcds-kit/issues/31
   * https://github.com/gregrahn/tpcds-kit/issues/33
 
+* Adjust some query templates to TiDB supported MySQL dialet, adjustments are ported from [FdeFabricio/tpcds-mysql](https://github.com/FdeFabricio/tpcds-mysql), thanks to [FdeFabricio](https://github.com/FdeFabricio/)
+
 ## 1. Setup
 
 ### 1.1 install required development tools
