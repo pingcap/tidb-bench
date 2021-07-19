@@ -1,7 +1,7 @@
 #!/bin/bash
 set -eu
 
-SCALE="1"
+SCALE=$1
 TEMPLATE_DIR="../query_templates"
 OUTPUT_DIR="queries"
 QUERY_ID=""
@@ -19,7 +19,9 @@ function generate_query()
 }
 
 #unsupported="87 17 38 8 18 22 27 21 16 32 37 40 82 92 94 12 20 36 49 44 53 63 67 70 86 89 98 1 2 4 5 11 14 23 24 30 31 33 39 47 51 54 56 57 58 59 60 64 74 75 77 78 80 81 83 95 97 13 6"
-unsupported="87 17 38 8 18 22 27 21 16 32 37 40 82 92 94 12 20 36 49 44 53 63 67 70 86 89 98 1 2 4 5 11 14 23 24 30 31 33 39 47 51 54 56 57 58 59 60 64 74 75 77 78 80 81 83 95 97"
+# unsupported="87 17 38 8 18 22 27 21 16 32 37 40 82 92 94 12 20 36 49 44 53 63 67 70 86 89 98 1 2 4 5 11 14 23 24 30 31 33 39 47 51 54 56 57 58 59 60 64 74 75 77 78 80 81 83 95 97"
+unsupported="14 18 22 27 36 5 67 70 77 80 86" # rollup function
+unsupported=$unsupported" 11 23 39 4 59" # tidb bug
 
 cd tools
 rm -rf $OUTPUT_DIR
