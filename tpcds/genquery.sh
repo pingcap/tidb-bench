@@ -18,6 +18,21 @@ function generate_query()
     mv "$OUTPUT_DIR/query_0.sql" "$OUTPUT_DIR/query_$QUERY_ID.sql"
 }
 
+function split_sql()
+{
+    cd $OUTPUT_DIR
+
+    count=`grep ';' query_$QUERY_ID.sql | wc -l`
+    if [[ $count -eq 1 ]]; then
+        cd -
+        return
+    fi
+
+    csplit --quiet --prefix=query_$QUERY_ID -k --suppress-matched --suffix-format="_%d.sql" query_$QUERY_ID.sql "/;/+1"
+    rm query_$QUERY_ID.sql
+    cd -
+}
+
 #unsupported="87 17 38 8 18 22 27 21 16 32 37 40 82 92 94 12 20 36 49 44 53 63 67 70 86 89 98 1 2 4 5 11 14 23 24 30 31 33 39 47 51 54 56 57 58 59 60 64 74 75 77 78 80 81 83 95 97 13 6"
 # unsupported="87 17 38 8 18 22 27 21 16 32 37 40 82 92 94 12 20 36 49 44 53 63 67 70 86 89 98 1 2 4 5 11 14 23 24 30 31 33 39 47 51 54 56 57 58 59 60 64 74 75 77 78 80 81 83 95 97"
 unsupported="14 18 22 27 36 5 67 70 77 80 86" # rollup function
@@ -39,6 +54,7 @@ for i in {1..99}; do
     fi
     QUERY_ID="$i"
     generate_query
+    split_sql
 done
 mv $OUTPUT_DIR ..
-cd -
+cd ..
