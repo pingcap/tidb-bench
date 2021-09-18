@@ -58,7 +58,7 @@ done
 
 Query generation is done via `dsqgen` with query templetes, here we use a pre-written shell script file [genquery.sh](./genquery.sh), after running this script, queries are located in directory "queries":
 ```sh
-./genquery.sh
+./genquery.sh 1
 ```
 
 All supported TPC-DS queries for TiDB are generated in `tools/queries`
