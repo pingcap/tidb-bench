@@ -163,12 +163,12 @@ function create_table(drv, con, table_num)
       drv:name() == "drizzle"
    then
       if sysbench.opt.auto_inc then
-         id_def = "INTEGER NOT NULL AUTO_INCREMENT"
+         id_def = "BIGINT UNSIGNED NOT NULL AUTO_INCREMENT"
       else
-         id_def = "INTEGER NOT NULL"
+         id_def = "BIGINT UNSIGNED NOT NULL"
       end
       engine_def = "/*! ENGINE = " .. sysbench.opt.mysql_storage_engine .. " */"
-      extra_table_options = mysql_table_options or ""
+      extra_table_options = "AUTO_ID_CACHE=100000 SHARD_ROW_ID_BITS=5 PRE_SPLIT_REGIONS=4"
    elseif drv:name() == "pgsql"
    then
       if not sysbench.opt.auto_inc then
@@ -190,7 +190,7 @@ CREATE TABLE sbtest%d(
   k INTEGER DEFAULT '0' NOT NULL,
   c CHAR(120) DEFAULT '' NOT NULL,
   pad CHAR(60) DEFAULT '' NOT NULL,
-  %s (id)
+  %s (id)  /*T![clustered_index] NONCLUSTERED */
 ) %s %s]],
       table_num, id_def, id_index_def, engine_def, extra_table_options)
 
